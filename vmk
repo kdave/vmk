@@ -1,0 +1,1033 @@
+#!/bin/bash
+#
+# A stupid-simple-standalone-shell frontend to KVM. Besides the common qemu-kvm
+# commandline wrapping, the vm images are stored as NOCOW files on BTRFS and
+# use reflinks for quick snapshots.
+
+VMK_VERSION=0.1
+VMK_BIN=$(readlink -f $0)
+VMK_HOME=$(dirname "$VMK_BIN")
+VMK_DEBUG=false
+
+VMK_HAS_GLOBAL_CONFIG=false
+VMK_HAS_USER_CONFIG=false
+VMK_HAS_LOCAL_CONFIG=false
+VMK_HAS_CONFIG=false
+VMK_HAS_CONFIG_SOURCED=false
+VMK_DRY_RUN=
+VMK_PIDFILE=
+
+# assume disk0 and mnt-disk0 for some commands
+VMK_LAZY_DEFAULTS=true
+
+# TODO: move to global config?
+VMK_DISK0_CACHE=none
+VMK_DISK_CACHE=none
+VMK_INST_DISK0=30g
+VMK_INST_DISK=100g
+VMK_INST_APPEND="splash=silent netsetup=dhcp install=cd:///?devices=/dev/sr0 console=tty0 console=ttyS0,115200 nomodeset vga=6"
+
+echo "VMK: $VMK_HOME"
+
+if [ "$1" = 'editme' ]; then
+	vim "$VMK_BIN"
+	exit 0
+fi
+
+# config precedence:
+# /etc/vmk-config - whatever global preferences you have, .iso paths etc, MAC mask, hostname assignments
+# ~/.vmkrc	  - user preferences
+# vmkrc		  - at the same level as vmk-config, but separate, may be shared among a group
+# vm-config	  - the VM specific config
+
+if [ -f "./vm-config" ]; then
+	echo "VMK: found vm-config"
+	VMK_HAS_CONFIG=true
+	VMK_CONFIG=./vm-config
+fi
+
+if [ -f "/etc/vmk-config" ]; then
+	echo "VMK: found global vmk-config"
+	VMK_HAS_GLOBAL_CONFIG=true
+	source /etc/vmk-config
+fi
+
+if [ -f "$HOME/.vmkrc" ]; then
+	echo "VMK: found per-user .vmkrc"
+	VMK_HAS_USER_CONFIG=true
+	source "$HOME/.vmkrc"
+fi
+
+if [ -f "./vmkrc" ]; then
+	echo "VMK: found local vmkrc"
+	VMK_HAS_LOCAL_CONFIG=true
+	source ./vmkrc
+fi
+
+##########################################################################
+# cmdline options
+
+while getopts c:Dx OPT; do
+	case "$OPT" in
+		c) VMK_CONFIG="$OPTARG";;
+		D) VMK_DRY_RUN=true;;
+		x) VMK_DEBUG=true;;
+		*) echo "Unknown argument: $OPT"; exit 1;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+$VMK_DEBUG && set -x
+
+VMK_CMD="$1"
+shift
+
+if [ -z "$VMK_CMD" ]; then
+	echo "Virtual machine tool, $VMK_VERSION"
+	exit 0
+fi
+
+##########################################################################
+# library functions
+
+function vmk_need_lazy_mount() {
+	vmk_need_config
+	if ! [ -d "mnt-disk0/etc" ]; then
+		echo "disk0 not mounted?"
+		exit 1
+	fi
+}
+
+function vmk_set() {
+	vmk_need_config
+
+	echo -n "Current: "
+	eval "echo $1 \$$1"
+
+	echo -n "New:     "
+	eval "echo $1 $2"
+
+	set -x
+	# TODO: broken, no comments preserved
+	sed -i -e "s#^$1=.*\(\s*\#\)\?\$#$1=$2\1#" ./vm-config
+}
+
+function vmk_assert_var() {
+	val=$(eval "echo \$$1")
+	if [ -z "$val" ]; then
+		echo "ASSERT: $1 empty"
+		exit 1
+	fi
+	if [ "$val" == 'false' ]; then
+		echo "ASSERT: $1 false"
+		exit 1
+	fi
+}
+
+function vmk_need_config() {
+	`$VMK_HAS_CONFIG_SOURCED` && return
+	if ! $VMK_HAS_CONFIG; then
+		echo "VMK: no config found"
+		exit 1
+	fi
+	set -e
+	source "$VMK_CONFIG"
+	set +e
+	VMK_HAS_CONFIG_SOURCED=true
+
+	vmk_config_init_state
+}
+
+function vmk_need_key() {
+	if ! [ -f 'vm-key' -a -f 'vm-key.pub' ]; then
+		echo "ERROR: key does not exist, use sshgenkey"
+		exit 1
+	fi
+}
+
+function vmk_config_init_state() {
+	VMK_PIDFILE="${VMK_DISK0}.pid"
+}
+
+function vmk_show_config_nocheck() {
+	echo "VMK config: name        $VMK_NAME"`[ -n "$VMK_TAG" ] && echo " ($VMK_TAG)"`
+	echo "VMK config: memory      $VMK_MEM"
+	echo "VMK config: cpus        $VMK_CPU"
+	echo "VMK config: vnc         $VMK_VNC"
+	echo "VMK config: MAC        " `vmk_config_vnc_to_mac`
+	echo "VMK config: IP         " `vmk_config_mac_to_ip`
+	echo "VMK config: HOST       " `vmk_config_ip_to_hostname`
+	echo "VMK config: disk        $VMK_DISK0"
+	echo "VMK config: iso         $VMK_ISO"
+	echo "VMK status: SSH key    " `if [ -f 'vm-key' -a 'vm-key.pub' ]; then echo "OK"; else echo "missing or partial"; fi`
+}
+
+function vmk_config_check() {
+	vmk_assert_var VMK_HAS_CONFIG_SOURCED
+	var="$1"
+	case "$var" in
+		vnc) val="$VMK_VNC";;
+		iso) val="$VMK_ISO";;
+		disk0) val="$VMK_DISK0";;
+	esac
+	if [ -z "$val" ]; then
+		echo "ERROR: $var not set in config"
+		exit 1
+	fi
+}
+
+function vmk_config_vnc_to_mac() {
+	vmk_need_config
+	vmk_config_check vnc
+	printf "$VMK_MAC_BASE_FORMAT" "$VMK_VNC"
+}
+
+function vmk_config_mac_to_ip() {
+	vmk_need_config
+	vmk_config_check vnc
+	local mac=`vmk_config_vnc_to_mac`
+	ip neigh | grep -i "$mac" | awk '{print $1}' | grep '.*\..*\..*\..*'
+}
+
+function vmk_config_ip_to_hostname() {
+	local ip
+	local hn
+	ip=`vmk_config_mac_to_ip`
+	[ -z "$ip" ] && return
+	hn=`host "$ip"`
+	if [ $? == 0 ]; then
+		echo -n "$hn" | awk '{print $NF}'
+	fi
+}
+
+function vmk_vnc_to_telnet() {
+	vmk_need_config
+	vmk_config_check vnc
+	echo -n "$(($VMK_TELNET_BASE + $VMK_VNC))"
+}
+
+function vmk_serial_telnet() {
+	vmk_need_config
+	vmk_config_check vnc
+	port=$(($VMK_TELNET_BASE + $VMK_VNC))
+	echo -n "-serial telnet:localhost:$port,server,nowait,nodelay"
+}
+
+function vmk_serial_default() {
+	#vmk_serial_stdio
+
+	# not connected to the terminal
+	#echo -n "-serial vc:120Cx60C"
+
+	# not connected to the terminal
+	#echo -n "-serial pty"
+
+	# no ctrl-c
+	# -curses
+
+	echo -n "-serial stdio"
+}
+
+function vmk_serial_stdio() {
+	vmk_need_config
+	vmk_config_check vnc
+	echo -n "-serial stdio"
+}
+
+function vmk_disk0_run() {
+	vmk_need_config
+	vmk_config_check disk0
+	echo -n "-drive file=$VMK_DISK0,if=scsi,index=0,cache=$VMK_DISK0_CACHE,media=disk"
+}
+
+function vmk_disks_run() {
+	local out
+	vmk_need_config
+	out=''
+	for idx in 1 2 3 4 5 6; do
+		if [ -f "disk$idx" ]; then
+			out="$out -drive file=disk$idx,if=scsi,index=$idx,cache=$VMK_DISK_CACHE,media=disk"
+		fi
+	done
+	echo -n "$out"
+}
+
+function vmk_check_free_vnc() {
+	vmk_need_config
+	vmk_config_check vnc
+}
+
+function vmk_cdrom() {
+	vmk_need_config
+	vmk_config_check iso
+	echo -n "-drive file=`vmk_config_iso_path`,if=ide,index=0,media=cdrom"
+}
+
+function vmk_net_mac() {
+	vmk_need_config
+	vmk_config_check vnc
+	mac=$(vmk_config_vnc_to_mac)
+	echo "-net nic,macaddr=$mac -net bridge,br=br0,helper=/usr/lib/qemu-bridge-helper"
+}
+
+function vmk_net_copy_scripts() {
+# not needed now
+if false; then
+	if ! [ -f "./qemu-ifdown" ]; then
+		echo '#!/bin/sh
+sudo /sbin/brctl delif br0 $1' > qemu-ifdown
+		chmod a+rx ./qemu-ifdown
+	fi
+	if ! [ -f "./qemu-ifup" ]; then
+		echo '#!/bin/sh
+sudo /sbin/ifconfig $1 up
+sudo /sbin/brctl addif br0 $1' > ./qemu-ifup
+		chmod a+rx ./qemu-ifup
+	fi
+fi
+
+	stat /usr/lib/qemu-bridge-helper | grep -q kvm || { echo "bridge helper not kvm-friendly - group"; exit 1; }
+	stat /usr/lib/qemu-bridge-helper | grep -q 4750 || { echo "bridge helper not kvm-friendly - suid"; exit 1; }
+	grep -q br0 /etc/qemu/bridge.conf || { echo "bridge.conf not set up"; exit 1; }
+}
+
+function vmk_check_already_running() {
+	local pid
+
+	if ! [ -f "$1" ]; then
+		echo "WARNING: pidfile $1 does not exist"
+		return 1
+	fi
+	pid=$(cat "$1")
+	if [ -f "/proc/$pid/stat" ] && grep -q "$VMK_DISK0" /proc/$pid/cmdline &&
+		grep -q 'qemu' /proc/$pid/cmdline; then
+			return 0
+	fi
+	return 1
+}
+
+function vmk_file_is_nocow() {
+	lsattr "$1" | awk '{print $1}' | grep -q C
+}
+
+function vmk_file_cp() {
+	local to
+	if [ -d "$2" ]; then
+		to="$2/$1"
+	else
+		to="$2"
+	fi
+	truncate -s0 -- "$2"
+	if vmk_file_is_nocow "$1"; then
+		chattr +C "$2"
+	else
+		chattr -C "$2"
+	fi
+	cp --reflink=always -a -- "$1" "$2"
+}
+
+function vmk_kvm() {
+	$VMK_DRY_RUN qemu-kvm "$@"
+}
+
+function vmk_kvm_base() {
+	vmk_kvm 				\
+		${VMK_MEM:+-m "$VMK_MEM"}	\
+		${VMK_CPU:+-smp "$VMK_CPU"}	\
+		${VMK_NAME:+-name "$VMK_NAME"}	\
+		-no-fd-bootchk			\
+		-pidfile "$VMK_PIDFILE"		\
+		-vnc ":$VMK_VNC"		\
+		`vmk_net_mac`			\
+		`vmk_disk0_run`			\
+		`vmk_disks_run`			\
+		"$@"
+}
+
+function vmk_kvm_bg_telnet() {
+	vmk_kvm_base			\
+		-daemonize		\
+		`vmk_serial_telnet`	\
+		-boot c			\
+		"$@"
+}
+
+function vmk_kvm_default() {
+	vmk_kvm_bg_telnet `vmk_cdrom` "$@"
+}
+
+function vmk_config_iso_path() {
+	vmk_need_config
+	local isofile
+	if [ -z "$VMK_ISO" ]; then
+		echo "ERROR: VMK_ISO name not set"
+		exit 1
+	fi
+	if ! [ -f "$VMK_ISO" ]; then
+		if [ -z "$VMK_ISO_DIR" ]; then
+			echo "ERROR: ISO path empty, local .iso not found"
+			exit 1
+		fi
+		isofile="$VMK_ISO_DIR/$VMK_ISO"
+	else
+		isofile="$VMK_ISO"
+	fi
+	echo -n "$isofile"
+}
+
+# TODO: more layouts, suse-style only now
+function vmk_config_iso_get_loader() {
+	local arch
+
+	arch="$1"
+	rm -f inst-initrd.part
+	isoinfo -i "$isopath" -RJ -x "/boot/$arch/loader/initrd" > inst-initrd.part
+	if ! [ -s 'inst-initrd.part' ]; then
+		echo "ERROR: cannot extract intird for $arch"
+		rm inst-initrd.part
+		return 1
+	fi
+	mv inst-initrd.part inst-initrd
+
+	rm -f inst-kernel.part
+	isoinfo -i "$isopath" -RJ -x "/boot/$arch/loader/linux" > inst-kernel.part
+	if ! [ -s 'inst-kernel.part' ]; then
+		echo "ERROR: cannot extract kernel for $arch"
+		rm inst-kernel.part
+		return 1
+	fi
+	mv inst-kernel.part inst-kernel
+}
+
+function vmk_mount_pre() {
+	local mntdir
+	local image
+	local lsof
+
+	vmk_need_config
+	image="$VMK_DISK0"
+
+	lsof=$(lsof 2> /dev/null | grep "$image")
+	if [ $? = 0 ]; then
+		echo "ERROR: seems that image is in use (lsof):"
+		echo "$lsof"
+		exit 1
+	fi
+	mntdir=$(mktemp -d mnt-XXXXXX)
+
+	# fixme: unexpected output
+	#echo "Mounting $image to $mntdir"
+	guestmount -o allow_root -i -a "$image" "$mntdir"
+	echo -n "$mntdir"
+}
+
+function vmk_umount() {
+	echo "Unmounting $1"
+	if ! fusermount -u "$1"; then
+		echo "fusermount not enough, try umount"
+		if ! sudo umount "$1"; then
+			echo "plain umount not enough, try -lfR"
+			sudo umount -lfR "$1"
+		fi
+	fi
+	rmdir --ignore-fail-on-non-empty "$1"
+}
+
+function vmk_get_iso_loaders() {
+	if [ -z "$VMK_ARCH" ]; then
+		for arch in i386 x86_64 ia64 ppc ppc64 s390 s390x aarch64 armv7l armv6l; do
+			if vmk_config_iso_get_loader "$arch"; then
+				echo "Detected $arch in iso, extracted initrd and kernel"
+				break
+			fi
+		done
+	else
+		if vmk_config_iso_get_loader "$VMK_ARCH"; then
+			echo "Found $VMK_ARCH in iso, extracted initrd and kernel"
+		else
+			echo "ERROR: cannot find $VMK_ARCH loader on iso"
+			exit 1
+		fi
+	fi
+
+}
+
+function vmk_inst_default_disk0() {
+	vmk_config_check disk0
+	if ! [ -f "$VMK_DISK0" ]; then
+		echo "disk0 not found, creating default"
+		touch "$VMK_DISK0"
+		chattr +C "$VMK_DISK0"
+		qemu-img create -f qcow2 "$VMK_DISK0" "$VMK_INST_DISK0"
+	fi
+}
+
+function vmk_inst_default_disks() {
+	for idx in 1 2 3 4 5 6; do
+		if ! [ -f "disk$idx" ]; then
+			touch "disk$idx"
+			chattr +C "disk$idx"
+			qemu-img create -f qcow2 "disk$idx" "$VMK_INST_DISK"
+		fi
+	done
+}
+
+function vmk_inst_prepare_cdrom() {
+	local mntdir
+
+	mntdir=$(mktemp -d mnt-XXXXXX)
+	cp autoinst.xml "$mntdir/" || exit 2
+	find "$mntdir" -ls
+	mkisofs -r -J -o inst-cdrom.part "$mntdir"
+	rm "$mntdir"/autoinst.xml || exit 2
+	rmdir --ignore-fail-on-non-empty "$mntdir"
+
+	mv inst-cdrom.part inst-cdrom
+}
+
+function vmk_inst_prepare_floppy() {
+	local mntdir
+
+	dd if=/dev/zero of=inst-floppy.part bs=1K count=1440
+	mkfs.fat inst-floppy.part
+	mntdir=$(mktemp -d mnt-XXXXXX)
+
+	sudo mount -o loop inst-floppy.part "$mntdir" || exit 2
+	sudo cp autoinst.xml "$mntdir/" || exit 2
+	find "$mntdir" -ls
+	sudo umount "$mntdir" || exit 2
+	rmdir --ignore-fail-on-non-empty "$mntdir"
+
+	mv inst-floppy.part inst-floppy
+}
+
+function vmk_pidfile_pid() {
+	if [ -f "$VMK_PIDFILE" ]; then
+		cat "$VMK_PIDFILE"
+	else
+		echo -n 'none'
+	fi
+}
+
+##########################################################################
+# process commands
+
+if [ "$VMK_CMD" = 'help' ]; then
+	echo "VM tool, version $VMK_VERSION"
+	echo "	help"
+	echo "	info	dump config and status"
+	echo "	status	dtto (alias for info)"
+	echo "	run	start a machine in the background (telnet access)"
+	echo "	runin	start a machine in the foreground (direct access)"
+	echo "	fixme	adjust bridge helpers and /etc/qemu/bridge.conf"
+	echo "	telnet	connect to VM through telnet"
+	echo "	dsnap	do a COW copy of disk0"
+	echo "	cpfile	COW-aware copy of a file"
+	echo "	fsnap	file snapshot, timestamp appended"
+	echo "	snap	snapshot of the machine, destrucively overwritten"
+	echo "	snap info	dtto info on a snapshot"
+	echo "	snap run	dtto run on a snapshot, overwrite disk0"
+	echo "	snap runin	dtto runin on a snapshot, overwrite disk0"
+	echo "	snap dsnap	dtto dsnap on a snapshot, overwrite disk0"
+	echo "	clone	clone given config and disk0 into a directory"
+	echo "	set	set a variable in the vm-config"
+	echo "	qinstall	quick installation"
+	echo "	ayinstall	quick installation from autoyast profile"
+	echo "  mount	mount disk0 image to mnt/"
+	echo "  umount	umount disk0 image from mnt/"
+	echo "  sshkeygen	generate new key for the machine"
+	echo "  sshkeyput	put the key to disk0://root/.ssh (mount/umount)"
+	echo "  ssh		ssh into the machine"
+	echo "  fixnet		add persistent netowk rule to assign eth0 to first NIC (mount/umount)"
+	echo "  chroot  mount disk0 and chroot into it, then umount"
+	echo "  zypper	runn zypper command on a locally mounted qcow2 image"
+	echo "  	WARNING: new rpm may break the DB on older images!"
+	echo "  zypp	dtto (alias for zypper)"
+	echo "  kill	kill the running machine"
+	echo "  mkdisks	create empty disks images (disk1-7)"
+	echo "  putfile	put a given file to VM's /root/vm, local mount of qcow2 image"
+	echo "  newconfig	generate sample vm-config, print to stdout"
+	exit 0
+fi
+
+if [ "$VMK_CMD" = 'info' -o "$VMK_CMD" = 'status' ]; then
+	vmk_need_config
+	vmk_show_config_nocheck
+
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK status:             running"
+	else
+		echo "VMK status:             stopped"
+	fi
+fi
+
+if [ "$VMK_CMD" = 'run' -o "$VMK_CMD" = 'runin' ]; then
+	vmk_need_config
+	vmk_show_config_nocheck
+	vmk_check_free_vnc
+	vmk_net_copy_scripts
+
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK: already running"
+		exit 1
+	fi
+
+	if [ "$VMK_CMD" = 'run' ]; then
+		echo "daemonizing, run: telnet localhost" $(vmk_vnc_to_telnet)
+		vmk_kvm_default
+	else	# runin
+		echo "foreground run, console is stdio, ctrl-C kills"
+		vmk_kvm_base `vmk_cdrom` `vmk_serial_default`
+	fi
+fi
+
+if [ "$VMK_CMD" = 'fixme' ]; then
+	stat /usr/lib/qemu-bridge-helper
+	sudo chown root:kvm /usr/lib/qemu-bridge-helper
+	sudo chmod 4750 /usr/lib/qemu-bridge-helper
+	stat /usr/lib/qemu-bridge-helper
+
+	grep -q 'allow br0' /etc/qemu/bridge.conf || echo "allow br0" | sudo tee -a /etc/qemu/bridge.conf
+	echo "FIXED"
+fi
+
+if [ "$VMK_CMD" = 'telnet' ]; then
+	vmk_need_config
+	vmk_show_config_nocheck
+
+	if ! vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK: not running"
+		exit 1
+	fi
+
+	telnet localhost $(vmk_vnc_to_telnet)
+fi
+
+if [ "$VMK_CMD" = 'dsnap' ]; then
+	vmk_need_config
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "WARNING: snapshot of running machine"
+	fi
+
+	ts=`date +%F_%T`
+	echo "Snapshotting $VMK_DISK0 with $ts"
+	vmk_file_cp "$VMK_DISK0" "$VMK_DISK0-$ts"
+fi
+
+if [ "$VMK_CMD" = 'cpfile' ]; then
+	[ -z "$1" ] && { echo "Empty source file name"; exit 1; }
+	[ -z "$2" ] && { echo "Empty target file/dir name"; exit 1; }
+	vmk_file_cp "$1" "$2"
+fi
+
+if [ "$VMK_CMD" = 'fsnap' ]; then
+	[ -z "$1" ] && { echo "Empty source file name"; exit 1; }
+	ts=`date +%F_%T`
+	echo "Snapshotting $1 with $ts"
+	vmk_file_cp "$1" "$1-$ts"
+fi
+
+if [ "$VMK_CMD" = 'snap' ]; then
+	VMK_CMD="$1"
+	shift
+
+	if [ -z "$VMK_CMD" ]; then
+		exit 0
+	fi
+	vmk_need_config
+	# TODO: make configurable
+	VMK_VNC=21
+	vmk_config_init_state
+	vmk_check_free_vnc
+	vmk_net_copy_scripts
+	snap="snap-$VMK_DISK0"
+
+	if [ "$VMK_CMD" = 'info' ]; then
+		vmk_show_config_nocheck
+
+		if vmk_check_already_running "$VMK_PIDFILE"; then
+			echo "VMK status:             running (pid `vmk_pidfile_pid`)"
+		else
+			echo "VMK status:             stopped"
+		fi
+	fi
+
+	if [ "$VMK_CMD" = 'run' -o "$VMK_CMD" = 'runin' ]; then
+		if vmk_check_already_running "$VMK_PIDFILE"; then
+			echo "VMK: snapshot already running"
+			exit 1
+		fi
+
+		vmk_file_cp "$VMK_DISK0" "$snap"
+		VMK_DISK0="$snap"
+		vmk_config_init_state
+		vmk_show_config_nocheck
+
+		echo "Running in snapshot $snap, overwriting disk0"
+		if [ "$VMK_CMD" = 'run' ]; then
+			echo "daemonizing, run: telnet localhost" $(vmk_vnc_to_telnet)
+			vmk_kvm_default
+		else	# runin
+			echo "foreground run, console is stdio, ctrl-C kills"
+			vmk_kvm_base `vmk_cdrom` `vmk_serial_default`
+		fi
+	fi
+
+	if [ "$VMK_CMD" = 'dsnap' ]; then
+		if vmk_check_already_running "$VMK_PIDFILE"; then
+			echo "WARNING: snapshot of running machine"
+		fi
+
+		ts=`date +%F_%T`
+		echo "Snapshotting $VMK_DISK0 with $ts"
+		vmk_file_cp "$snap" "$snap-$ts"
+	fi
+fi
+
+if [ "$VMK_CMD" = 'clone' ]; then
+	vmk_need_config
+	outdir=.
+	name="$VMK_NAME"-clone
+	while getopts o:n: OPT; do
+		case "$OPT" in
+			o) outdir="$OPTARG";;
+			n) name="$OPTARG";;
+			*) echo "Unknown clone argument: $OPT"; exit 1;;
+		esac
+	done
+
+	if [ -z "$outdir" ]; then
+		echo "Use -o DIR to say where to clone"
+		exit 1
+	fi
+	if [ -e "$outdir" ] && ! [ -d "$outdir" ]; then
+		echo "Output exists but is not a directory"
+		exit 1
+	fi
+
+	if [ -z "$name" ]; then
+		echo "Use -n NAME to say how to name it"
+		exit 1
+	fi
+
+	if [ -d "$outdir/$name" ]; then
+		echo "Output already contains a clone, move it away: $outdir/$name"
+		exit 1
+	fi
+
+	mkdir "$outdir/$name"
+	echo "Copying config and disk0 image to $outdir/$name"
+	cp -a vm-config "$outdir/$name"
+	vmk_file_cp "$VMK_DISK0" "$outdir/$name/$VMK_DISK0"
+fi
+
+if [ "$VMK_CMD" = 'set' ]; then
+	vmk_need_config
+	key="$1"
+	shift
+
+	if [ -z "$key" ]; then
+		echo "No key to set"
+		exit 1
+	fi
+
+	value="$1"
+	shift
+
+	case "$key" in
+		vnc|VNC|VMK_VNC) vmk_set VMK_VNC "$value";;
+		m|mem|VMK_MEM) vmk_set VMK_VNC "$value";;
+		*) echo "Unknown key $key"; exit 1;;
+	esac
+fi
+
+if [ "$VMK_CMD" = 'qinstall' ]; then
+	vmk_need_config
+	if $VMK_HAS_CONFIG; then
+		vmk_need_config
+		vmk_config_check iso
+		# TODO: fails if no config
+		isopath=`vmk_config_iso_path`
+	fi
+
+	vmk_get_iso_loaders
+	vmk_inst_default_disk0
+
+	VMK_DISK0_CACHE=unsafe
+	vmk_kvm_base				\
+		`vmk_serial_default`		\
+		-initrd inst-initrd		\
+		-kernel inst-kernel		\
+		`vmk_cdrom`			\
+		-boot once=d			\
+		-no-reboot			\
+		-append	"$VMK_INST_APPEND"
+
+	# TODO: stdio or telnet?
+	VMK_DISK0_CACHE=none
+	vmk_kvm_base				\
+		`vmk_serial_default`		\
+		`vmk_cdrom`			\
+		-boot c
+fi
+
+if [ "$VMK_CMD" = 'ayinstall' ]; then
+	vmk_need_config
+	if $VMK_HAS_CONFIG; then
+		vmk_need_config
+		vmk_config_check iso
+		# TODO: fails if no config
+		isopath=`vmk_config_iso_path`
+	fi
+
+	vmk_get_iso_loaders
+	vmk_inst_default_disk0
+	if ! [ -f 'autoinst.xml' ]; then
+		echo "ERROR: no autoinst.xml file found"
+		exit 1
+	fi
+	vmk_inst_prepare_floppy
+	vmk_inst_prepare_cdrom
+
+	echo "FIRST PHASE STARTED"
+	VMK_DISK0_CACHE=unsafe
+	vmk_kvm_base				\
+		`vmk_serial_default`		\
+		-initrd inst-initrd		\
+		-kernel inst-kernel		\
+		`vmk_cdrom`			\
+		-boot once=d			\
+		-no-reboot			\
+		-fda inst-floppy		\
+		-drive file=inst-cdrom,if=ide,index=1,media=cdrom	\
+		-append	"$VMK_INST_APPEND textmode=1 TERM=xterm autoyast=device://sr1/autoinst.xml"
+
+	echo "FIRST PHASE FINISHED"
+
+	echo "SECOND PHASE STARTED"
+	# TODO: stdio or telnet?
+	VMK_DISK0_CACHE=none
+	vmk_kvm_base				\
+		`vmk_serial_default`		\
+		`vmk_cdrom`			\
+		-boot c
+	echo "SECOND PHASE FINISHED"
+fi
+
+if [ "$VMK_CMD" = 'mount' ]; then
+	image="$1"
+	mntdir="$2"
+
+	if [ -z "$image" ]; then
+		if `$VMK_LAZY_DEFAULTS`; then
+			vmk_need_config
+			echo "INFO: lazy mode on"
+			image="$VMK_DISK0"
+		else
+			echo "ERROR: no image"
+			exit 1
+		fi
+	fi
+	if [ -z "$mntdir" ]; then
+		if `$VMK_LAZY_DEFAULTS`; then
+			vmk_need_config
+			echo "INFO: lazy mode on"
+			mntdir="mnt-disk0"
+		else
+			echo "ERROR: no mntdir"
+			exit 1
+		fi
+	fi
+
+	lsof=$(lsof 2> /dev/null | grep "$image")
+	if [ $? = 0 ]; then
+		echo "ERROR: seems that image is in use (lsof):"
+		echo "$lsof"
+		exit 1
+	fi
+
+	mkdir -p $mntdir
+	guestmount -o allow_root -i -a "$image" "$mntdir"
+	echo "Mounted $image at $mntdir"
+fi
+
+if [ "$VMK_CMD" = 'umount' ]; then
+	mntdir="$1"
+	if [ -z "$mntdir" ]; then
+		if `$VMK_LAZY_DEFAULTS`; then
+			echo "INFO: lazy mode on"
+			mntdir="mnt-disk0"
+		else
+			echo "Expecting argument"
+			exit 1
+		fi
+	fi
+	vmk_umount "$mntdir"
+fi
+
+if [ "$VMK_CMD" = 'sshkeygen' ]; then
+	if [ -f 'vm-key' -o -f 'vm-key.pub' ]; then
+		echo "ERROR: key already exists"
+		exit 1
+	fi
+	ssh-keygen -f vm-key -C "Autogenerated SSH key for a VM, for one-time use" -b 2048 -t rsa -N ''
+	chmod og-rw vm-key
+
+	echo "Generated new key"
+fi
+
+if [ "$VMK_CMD" = 'sshkeyput' ]; then
+	vmk_need_key
+	mntdir=`vmk_mount_pre`
+	echo "Copy vm-key"
+	sudo mkdir -p "$mntdir/root/.ssh"
+	cat vm-key.pub | sudo tee -a "$mntdir/root/.ssh/authorized_keys" > /dev/null
+	vmk_umount "$mntdir"
+fi
+
+if [ "$VMK_CMD" = 'ssh' ]; then
+	vmk_need_config
+	if ! vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK: VM not running"
+		exit 1
+	fi
+	vmk_need_key
+
+	host=`vmk_config_ip_to_hostname`
+	if [ -z "$host" ]; then
+		echo "VMK: Cannot resolve hostname, trying IP address"
+		host=`vmk_config_mac_to_ip`
+		if [ -z "$host" ]; then
+			if ! [ -z "$VMK_HOSTNAME" ]; then
+				echo "VMK: using $VMK_HOSTNAME from config"
+				host="$VMK_HOSTNAME"
+			fi
+		fi
+	fi
+	if [ -z "$host" ]; then
+		echo "ERROR: Cannot match MAC with IP or hostname, nor VMK_HOSTNAME set"
+		exit 1
+	fi
+
+	echo "SSH into root@$host with vm-key"
+	ssh -t -i vm-key "root@$host" "$@"
+fi
+
+if [ "$VMK_CMD" = 'fixnet' ]; then
+	vmk_need_config
+	echo "INFO: mount $VMK_DISK0"
+	mntdir=`vmk_mount_pre`
+	echo "INFO: fix persistent rules"
+	sudo sed -i -e 's/ATTR{address}=="[^"]\+",//' \
+		"$mntdir/etc/udev/rules.d/70-persistent-net.rules"
+	echo "INFO: umount"
+	vmk_umount "$mntdir"
+fi
+
+if [ "$VMK_CMD" = 'chroot' ]; then
+	vmk_need_config
+	echo "INFO: mount $VMK_DISK0"
+	mntdir=`vmk_mount_pre`
+
+	sudo mount --bind /dev "$mntdir/sys"
+	sudo mount --bind /sys "$mntdir/dev"
+	sudo mount --bind /proc "$mntdir/proc"
+
+	(
+	echo "Chrooting into $mntdir, exit unmounts"
+	sudo chroot "$mntdir" /bin/sh
+	)
+
+	sudo umount -lfR "$mntdir/sys" "$mntdir/dev" "$mntdir/proc"
+	vmk_umount "$mntdir"
+fi
+
+if [ "$VMK_CMD" = 'zypper' -o "$VMK_CMD" = 'zypp' ]; then
+	# verify mounted
+	if `$VMK_LAZY_DEFAULTS`; then
+		echo "INFO: lazy mode on"
+		vmk_need_lazy_mount
+	else
+		echo "Not implemented without lazy defaults"
+		exit 1
+	fi
+
+	sudo zypper --root "`pwd`/mnt-disk0" "$@"
+fi
+
+if [ "$VMK_CMD" = 'kill' ]; then
+	vmk_need_config
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		pid=`vmk_pidfile_pid`
+		echo "Kill pid $pid (INT, TERM, KILL)"
+		kill -INT "$pid"
+		sleep 1
+		kill -0 "$pid " && kill -TERM "$pid"
+		sleep 1
+		kill -0 "$pid " && kill -KILL "$pid"
+	fi
+fi
+
+if [ "$VMK_CMD" = 'mkdisks' ]; then
+	vmk_need_config
+	vmk_inst_default_disks
+fi
+
+if [ "$VMK_CMD" = 'putfile' ]; then
+	vmk_need_config
+	if ! `$VMK_LAZY_DEFAULTS`; then
+		echo "Putfiles not implemented for nonlazy mode"
+		exit 1
+	fi
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK: VM running"
+		exit 1
+	fi
+
+	image="$VMK_DISK0"
+	mntdir="mnt-disk0"
+	ownmount=false
+	if ! [ -d "mnt-disk0/etc" ]; then
+		# TODO: merge with mount
+		echo "INFO: lazy mounting disk0"
+		mkdir -p $mntdir
+		guestmount -o allow_root -i -a "$image" "$mntdir"
+		ownmount=true
+	else
+		echo "INFO: found lazy mounted disk0"
+	fi
+	target=/root/vm
+	sudo mkdir -p "$mntdir/$target"
+	cp -av -t "$mntdir/$target/." "$@"
+
+	if `$ownmount`; then
+		echo "INFO: umounting"
+		vmk_umount "$mntdir"
+	fi
+fi
+
+
+if [ "$VMK_CMD" = 'newconfig' ]; then
+	echo \
+'#!/bin/sh
+
+VMK_NAME=name
+VMK_TAG=optional-tag
+VMK_VNC=1
+VMK_MEM=1024
+VMK_CPU=2
+VMK_DISK0=name.qcow2
+VMK_ISO=product-base.iso'
+
+fi
+
+#set vim:fdm=indent
+#
+# TODO:
+# - dsnap revert: botched up update of the base image
+# - dsnap -m'msg' or -e: edit text about the snapshot
+# - base image management:
+# - check prerequisities (tools, packages)
+# - live snapshot: freeze all filesystems, dsnap outside, thaw
+# - recognize running snapshot, ssh into it or snap ssh explicitly?

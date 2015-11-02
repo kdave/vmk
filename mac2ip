@@ -1,0 +1,13 @@
+#!/bin/sh
+# usage: $0 MAC [bridgeiface]
+# determine whath IP address would a given MAC get on a local network from DHCP
+
+set -e
+ifn=mac$RANDOM
+mac="$1"
+br=${2:-br0}
+[ "$UID" = 0 ] || sudo=sudo
+ip link | grep -q -i "$mac" && { echo "address $mac taken ..."; exit 1; }
+$sudo ip link add link $br $ifn address $mac type macvlan
+$sudo dhcpcd-test $ifn | egrep '^HOSTNAME|^IPADDR'
+$sudo ip link del $ifn
