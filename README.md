@@ -32,7 +32,57 @@ Features
 * serial console via telnet
 * vnc access
 
+Quick start
+-----------
+
+Generate minimal config by `vmk newconfig > vm-config` and edit manually.
+
+* `VMK_NAME=name` - an identifier, passed (kvm: `-name`)
+* `VMK_VNC=1` - number of the vnc port, also used to derive MAC, IP and hostname (kvm: `-vnc`)
+* `VMK_MEM=1024` - memory size of the vm (kvm: `-m`)
+* `VMK_CPU=2` - number of cpus (kvm: `-smp`)
+* `VMK_DISK0=name.qcow2` - first disk image (kvm: scsi, cache=safe)
+* `VMK_ISO=install.iso` - an .iso image to install from (kvm: ide cdrom)
+
+Now run `vmk qinstall`. This will create the disk image and start booting from
+the iso image. Proceed with manual installation.
+
+Alternatively, you can provide an autoyast config which will perform the
+installation without human intervention. (TODO: sample configs) Use `vmk
+ayinstall` for that.
+
+Depending on the configuration, you should be able to reach the vm via ssh. You can
+generate a ssh key pair for this particular machine. Stop it first, then run
+`vmk sshkeygen` to generate the pair and then `vmk sshkeyput`. This will locally mount
+the first disk image (using `libguestfs') and copy the public key to `/root/.ssh/authorized_keys`.
+
+Access though the serial console requires configuration from inside the vm. The
+installation process configures the serial console and the settings are
+inherited by the vm.  The actual setting for bootloader is `console=tty0
+console=ttyS0,115200`, should you need to configure it that manually.
+
+Basic commands to manage the vm:
+
+* `run` - start on the background
+* `runin` - start in the foreground, beware that Ctrl-C will kill the machine
+* `info` - print the info (config), good for checking if the vm is running
+* `kill` - forcibly kill based on matching process name
+
+Start the vm on a snapshot of the first disk image (file copy, good for scratch testing):
+
+* `snap run` - same as `run`, using file `snap-$VMK_DISK0`
+* `snap runin` - same as `runin`, using file `snap-$VMK_DISK0`
+
+Commands to manage the disk images:
+
+* `dsnap` - create a snapshot of the first image (by reflink), a timestamp is appended
+* `cpfile` - do a reflink copy of a file, preserving attributes
+* `mount` - mount the first image to `mnt-disk0`
+* `umount` - umount the first image from `mnt-disk0`
+
+See `vmk help` for the rest.
+
 License
 -------
 
-GNU GENERAL PUBLIC LICENSE Version 2.
+[GNU GENERAL PUBLIC LICENSE Version 2.](https://www.gnu.org/licenses/gpl-2.0.html)
