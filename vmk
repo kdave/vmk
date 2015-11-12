@@ -939,7 +939,7 @@ if [ "$VMK_CMD" = 'chroot' ]; then
 	sudo chroot "$mntdir" /bin/sh
 	)
 
-	sudo umount -lfR "$mntdir/sys" "$mntdir/dev" "$mntdir/proc"
+	sudo umount -lfR "$mntdir/sys" "$mntdir/dev" "$mntdir/proc" || sudo umount -lfR "$mntdir"
 	vmk_umount "$mntdir"
 fi
 
