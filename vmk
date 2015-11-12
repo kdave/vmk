@@ -934,6 +934,11 @@ if [ "$VMK_CMD" = 'chroot' ]; then
 	sudo mount --bind /sys "$mntdir/dev"
 	sudo mount --bind /proc "$mntdir/proc"
 
+	mkdir -p overlay/etc
+	cp /etc/resolv.conf overlay/etc
+
+	sudo mount --bind overlay/etc/resolv.conf "$mntdir/etc/resolv.conf"
+
 	(
 	echo "Chrooting into $mntdir, exit unmounts"
 	sudo chroot "$mntdir" /bin/sh
