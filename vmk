@@ -17,6 +17,8 @@ VMK_HAS_CONFIG_SOURCED=false
 VMK_DRY_RUN=
 VMK_PIDFILE=
 
+__SSH_BE_HAPPY='-o CheckHostIP=no -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
 # assume disk0 and mnt-disk0 for some commands
 VMK_LAZY_DEFAULTS=true
 
@@ -886,7 +888,7 @@ if [ "$VMK_CMD" = 'sshkeyput' ]; then
 	vmk_umount "$mntdir"
 fi
 
-if [ "$VMK_CMD" = 'ssh' ]; then
+if [ "$VMK_CMD" = 'ssh' -o "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; then
 	vmk_need_config
 	if ! vmk_check_already_running "$VMK_PIDFILE"; then
 		echo "VMK: VM not running"
@@ -910,8 +912,22 @@ if [ "$VMK_CMD" = 'ssh' ]; then
 		exit 1
 	fi
 
-	echo "SSH into root@$host with vm-key"
-	ssh -t -i vm-key "root@$host" "$@"
+	dowait=false
+	if [ "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; then
+		dowait=true
+	fi
+	echo "SSH (wait=$dowait) into root@$host with vm-key"
+	ssh $__SSH_BE_HAPPY -t -i vm-key "root@$host" "$@"
+	ret=$?
+	echo "INFO: ssh returned with $ret"
+	while [ $ret = 255 ] && $dowait; do
+		sleep 1
+		ssh $__SSH_BE_HAPPY -t -i vm-key "root@$host" "$@"
+		ret=$?
+		# TODO: various errors, single error code
+		echo "INFO: ssh returned with $ret"
+	done
+	(exit $ret)
 fi
 
 if [ "$VMK_CMD" = 'fixnet' ]; then
