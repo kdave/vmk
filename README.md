@@ -82,6 +82,11 @@ Commands to manage the disk images:
 
 See `vmk help` for the rest.
 
+References
+----------
+
+* [Autoyast documentation (applies to recent openSUSE and SLES)](https://www.suse.com/documentation/sles-12/singlehtml/book_autoyast/book_autoyast.html)
+
 License
 -------
 
