@@ -638,8 +638,6 @@ if [ "$VMK_CMD" = 'snap' ]; then
 		exit 0
 	fi
 	vmk_need_config
-	# TODO: make configurable
-	VMK_VNC=21
 	vmk_config_init_state
 	vmk_check_free_vnc
 	vmk_net_copy_scripts
