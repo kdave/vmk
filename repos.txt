@@ -1,0 +1,26 @@
+# distro
+
+http://download.opensuse.org/distribution/13.1/repo/oss/
+http://download.opensuse.org/distribution/13.2/repo/oss/
+http://download.opensuse.org/distribution/leap/42.1/repo/oss/
+http://download.opensuse.org/tumbleweed/repo/oss/
+http://download.opensuse.org/tumbleweed/repo/non-oss/
+
+# update
+
+http://download.opensuse.org/update/13.1/
+http://download.opensuse.org/update/13.1-non-oss/
+http://download.opensuse.org/update/13.2/
+http://download.opensuse.org/update/13.2-non-oss/
+http://download.opensuse.org/update/leap/42.1/oss/
+http://download.opensuse.org/update/leap/42.1/non-oss/
+
+# kernel
+
+http://download.opensuse.org/repositories/Kernel:/stable/standard/
+http://download.opensuse.org/repositories/Kernel:/HEAD/standard/
+http://download.opensuse.org/repositories/Kernel:/vanilla/standard/
+http://download.opensuse.org/repositories/Kernel:/linux-next/standard/
+http://download.opensuse.org/repositories/Kernel:/openSUSE-13.1/standard/
+http://download.opensuse.org/repositories/Kernel:/openSUSE-13.2/standard/
+http://download.opensuse.org/repositories/Kernel:/openSUSE-42.1/standard/
