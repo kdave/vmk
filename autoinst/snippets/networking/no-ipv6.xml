@@ -1,0 +1,3 @@
+  <networking>
+    <ipv6 config:type="boolean">false</ipv6>
+  </networking>

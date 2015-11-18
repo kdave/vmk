@@ -1,0 +1,3 @@
+  <networking>
+    <managed config:type="boolean">false</managed>
+  </networking>

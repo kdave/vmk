@@ -1,0 +1,4 @@
+  <timezone>
+    <hwclock>UTC</hwclock>
+    <timezone>Europe/Prague</timezone>
+  </timezone>

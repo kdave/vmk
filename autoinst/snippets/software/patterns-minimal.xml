@@ -1,0 +1,5 @@
+  <software>
+    <patterns config:type="list">
+      <pattern>Minimal</pattern>
+    </patterns>
+  </software>

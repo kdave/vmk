@@ -1,0 +1,13 @@
+  <bootloader>
+    <loader_type>grub2</loader_type>
+    <global>
+      <generic_mbr>false</generic_mbr>
+      <boot_mbr>true</boot_mbr>
+      <activate>true</activate>
+      <boot_root>true</boot_root>
+      <gfxmenu>none</gfxmenu>
+      <timeout config:type="integer">4</timeout>
+      <serial>--unit=0 --speed=115200</serial>
+      <terminal>--timeout=4 serial console</terminal>
+    </global>
+  </bootloader>

@@ -1,0 +1,7 @@
+<users config:type="list">
+  <user>
+    <encrypted config:type="boolean">false</encrypted>
+    <user_password>test</user_password>
+    <username>root</username>
+  </user>
+</users>

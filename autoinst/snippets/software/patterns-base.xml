@@ -1,0 +1,6 @@
+  <software>
+    <patterns config:type="list">
+      <pattern>base</pattern>
+      <pattern>enhanced_base</pattern>
+    </patterns>
+  </software>
