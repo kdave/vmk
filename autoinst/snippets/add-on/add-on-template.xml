@@ -1,8 +1,8 @@
   <add-on>
     <add_on_products config:type="list">
       <listentry>
-	<media_url>http://</media_url>
-	<name>...</name>
+	<media_url>@REPOURL@</media_url>
+	<name>@REPONAME@</name>
 	<ask_on_error config:type="boolean">false</ask_on_error>
       </listentry>
     </add_on_products>

@@ -1,0 +1,9 @@
+  <add-on>
+    <add_on_products config:type="list">
+      <listentry>
+	<media_url>http://download.opensuse.org/repositories/Kernel:/openSUSE-42.1/standard/</media_url>
+	<name>Kernel builds for branch openSUSE-42.1 (standard)</name>
+	<ask_on_error config:type="boolean">false</ask_on_error>
+      </listentry>
+    </add_on_products>
+  </add-on>
