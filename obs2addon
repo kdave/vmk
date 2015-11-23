@@ -1,0 +1,28 @@
+#!/bin/sh
+
+urlbase="http://download.opensuse.org/repositories/"
+obs="$1"
+if [ -z "$obs" ]; then
+	echo "Usage: $0 obsproject/repository"
+	echo
+	echo "   eg. $0 devel:tools/openSUSE_13.1"
+	exit 1
+fi
+if ! echo "$obs" | grep -q '/'; then
+	echo "No / found, no repository?"
+	exit 1
+fi
+obsurl=$(echo "$obs" | sed -e 's,:,:/,')
+url="$urlbase$obsurl"
+tmp=tmpurl$$$RANDOM
+wget --quiet -O $tmp $url
+path=$(cat "$tmp" | tr '<' '\n' | grep -i '^a\s\+href' | grep '\.repo"' | sed -e 's/^[^"]\+"\.\?//;s/".*//')
+rm -- "$tmp"
+fn=tmp$$-`basename $path`
+wget --quiet $url/$path -O "$fn"
+name=$(cat "$fn" | grep '^name' | sed -e 's/^name=//')
+addr=$(cat "$fn" | grep '^baseurl' | sed -e 's/^baseurl=//')
+rm -- "$fn"
+sed < autoinst/snippets/add-on/add-on-template.xml -e "s#@REPONAME@#$name#;s#@REPOURL@#$addr#" > add-on-new.xml
+
+echo "New add-on xml in add-on-new.xml, rename"
