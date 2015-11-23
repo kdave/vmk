@@ -5,7 +5,8 @@ A stupid-simple-standalone-shell frontend to KVM. Besides the common qemu-kvm
 commandline wrapping, the vm images are stored as NOCOW files on BTRFS and use
 reflinks for quick snapshots.
 
-Status: it's usable but mostly documented "in the code"
+*Status: it's usable but mostly documented "in the code" and there are still
+some hardcoded assumptions that will be eliminated eventually*
 
 Dependencies
 ------------
@@ -81,6 +82,35 @@ Commands to manage the disk images:
 * `umount` - umount the first image from `mnt-disk0`
 
 See `vmk help` for the rest.
+
+VM image management
+-------------------
+
+No central image store and management. There are some supporting commands but
+it's up to you where do you store the images and how do you use them.
+
+`vmk clone -o outputdir -n vmdirname` will copy the *vm-config* and the first
+disk image into directory `outputid/vmdirname`. If you need to copy the files
+individually, use `vmk cpfile srcfile destfile` (note that the command really
+works on files and is not a *cp* replacement).
+
+As an example, let's assume we have a base image with some setup and config and
+want to clone it for further testing. The current directory contains the base image:
+
+`vmk clone -o .. -n test-something`
+
+Then go to `../test-something` and edit the *vm-config* to tune the parameters.
+Some basic scripting support exists, `vmk set` but so far is very limited. Only
+`vnc` and `mem` are implemented.
+
+Automatic installation
+----------------------
+
+The directory `autoinst` contains various autoyast xml files that can be used
+to run automatic installation, either with some preset defaults or completely
+unattended.
+
+* `autoinst/snippets/` -- subdirectories by subsystem, named after respective autoyast xml sections
 
 References
 ----------
