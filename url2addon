@@ -1,0 +1,19 @@
+#!/bin/sh
+
+url="$1"
+if [ -z "$url" ]; then
+	echo "Usage: $0 url"
+	exit 1
+fi
+tmp=tmpurl$$$RANDOM
+wget --quiet -O $tmp $url
+path=$(cat "$tmp" | tr '<' '\n' | grep -i '^a\s\+href' | grep '\.repo"' | sed -e 's/^[^"]\+"\.\?//;s/".*//')
+rm -- "$tmp"
+fn=tmp$$-`basename $path`
+wget --quiet $url/$path -O "$fn"
+name=$(cat "$fn" | grep '^name' | sed -e 's/^name=//')
+addr=$(cat "$fn" | grep '^baseurl' | sed -e 's/^baseurl=//')
+rm -- "$fn"
+sed < autoinst/snippets/add-on/add-on-template.xml -e "s#@REPONAME@#$name#;s#@REPOURL@#$addr#" > add-on-new.xml
+
+echo "New add-on xml in add-on-new.xml, rename"
