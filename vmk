@@ -309,6 +309,16 @@ function vmk_check_already_running() {
 	return 1
 }
 
+function vmk_check_already_running_any() {
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		return 1
+	fi
+	if vmk_check_already_running snap-"$VMK_PIDFILE"; then
+		return 1
+	fi
+	return 0
+}
+
 function vmk_file_is_nocow() {
 	lsattr "$1" | awk '{print $1}' | grep -q C
 }
@@ -542,6 +552,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "  sshkeyput	put the key to disk0://root/.ssh (mount/umount)"
 	echo "  ssh		ssh into the machine"
 	echo "  fixnet		add persistent netowk rule to assign eth0 to first NIC (mount/umount)"
+	echo "  prep		forward to virt-sysprep, applied o disk0"
 	echo "  chroot  mount disk0 and chroot into it, then umount"
 	echo "  zypper	runn zypper command on a locally mounted qcow2 image"
 	echo "  	WARNING: new rpm may break the DB on older images!"
@@ -937,6 +948,20 @@ if [ "$VMK_CMD" = 'fixnet' ]; then
 		"$mntdir/etc/udev/rules.d/70-persistent-net.rules"
 	echo "INFO: umount"
 	vmk_umount "$mntdir"
+fi
+
+if [ "$VMK_CMD" = 'prep' ]; then
+	vmk_need_config
+	if ! type -p virt-sysprep; then
+		echo "ERROR: virt-sysprep not found"
+		exit 1
+	fi
+	vmk_config_check disk0
+	if vmk_check_already_running_any; then
+		echo "VMK: VM running"
+		exit 1
+	fi
+	virt-sysprep -a "$VMK_DISK0"
 fi
 
 if [ "$VMK_CMD" = 'chroot' ]; then
