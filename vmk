@@ -1064,6 +1064,14 @@ if [ "$VMK_CMD" = 'putfile' ]; then
 	fi
 fi
 
+if [ "$VMK_CMD" = 'isrunning' ]; then
+	vmk_need_config
+	if vmk_check_already_running "$VMK_PIDFILE"; then
+		exit 0
+	fi
+	exit 1
+fi
+
 
 if [ "$VMK_CMD" = 'newconfig' ]; then
 	echo \
