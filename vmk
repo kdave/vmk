@@ -416,6 +416,7 @@ function vmk_mount_pre() {
 	local mntdir
 	local image
 	local lsof
+	local choice
 
 	vmk_need_config
 	image="$VMK_DISK0"
@@ -424,7 +425,13 @@ function vmk_mount_pre() {
 	if [ $? = 0 ]; then
 		echo "ERROR: seems that image is in use (lsof):"
 		echo "$lsof"
-		exit 1
+		echo
+		read -p "Do you want to continue [y/N]? " -n 1 choice
+		if [ "$choice" = 'y' -o "$choice" = 'Y' ]; then
+			echo "Override"
+		else
+			exit 1
+		fi
 	fi
 	mntdir=$(mktemp -d mnt-XXXXXX)
 
@@ -855,7 +862,13 @@ if [ "$VMK_CMD" = 'mount' ]; then
 	if [ $? = 0 ]; then
 		echo "ERROR: seems that image is in use (lsof):"
 		echo "$lsof"
-		exit 1
+		echo
+		read -p "Do you want to continue [y/N]? " -n 1 choice
+		if [ "$choice" = 'y' -o "$choice" = 'Y' ]; then
+			echo "Override"
+		else
+			exit 1
+		fi
 	fi
 
 	mkdir -p $mntdir
