@@ -165,6 +165,8 @@ function vmk_show_config_nocheck() {
 	echo "VMK status: SSH key    " `if [ -f 'vm-key' -a 'vm-key.pub' ]; then echo "OK"; else echo "missing or partial"; fi`
 }
 
+# fail with an error message if the given entry is empty, use only for
+# mandatory options
 function vmk_config_check() {
 	vmk_assert_var VMK_HAS_CONFIG_SOURCED
 	var="$1"
@@ -260,8 +262,12 @@ function vmk_check_free_vnc() {
 	vmk_config_check vnc
 }
 
+# iso/cdrom is not mandatory
 function vmk_cdrom() {
 	vmk_need_config
+	if [ -z "$VMK_ISO" ]; then
+		return
+	fi
 	vmk_config_check iso
 	echo -n "-drive file=`vmk_config_iso_path`,if=ide,index=0,media=cdrom"
 }
