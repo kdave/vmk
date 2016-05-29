@@ -588,6 +588,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "  kill	kill the running machine"
 	echo "  mkdisks	create empty disks images (disk1-7)"
 	echo "  putfile	put a given file to VM's /root/vm, local mount of qcow2 image"
+	echo "  checksetup	system capabilities (virt, networking, etc)"
 	echo "  newconfig	generate sample vm-config, print to stdout"
 	exit 0
 fi
@@ -1093,6 +1094,29 @@ if [ "$VMK_CMD" = 'isrunning' ]; then
 	exit 1
 fi
 
+if [ "$VMK_CMD" = 'checksetup' ]; then
+	if stat /usr/lib/qemu-bridge-helper | grep -q kvm; then
+		echo "VMK: bridge helper group ok"
+	else
+		echo "VMK: bridge helper not kvm-friendly - group"
+	fi
+
+	if stat /usr/lib/qemu-bridge-helper | grep -q 4750; then
+		echo "VMK: bridge helper suid ok"
+	else
+		echo "VMK: bridge helper not kvm-friendly - suid"
+	fi
+
+	if grep -q br0 /etc/qemu/bridge.conf; then
+		echo "VMK: bridge.conf set up for br0"
+	else
+		echo "VMK: bridge.conf not set up, br0 not found"
+	fi
+
+	# guestmount
+	# filesystem type
+	# networking capabilities, bridge etc
+fi
 
 if [ "$VMK_CMD" = 'newconfig' ]; then
 	echo \
