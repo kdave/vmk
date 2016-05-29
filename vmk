@@ -23,6 +23,7 @@ __SSH_BE_HAPPY='-o CheckHostIP=no -o ConnectTimeout=5 -o StrictHostKeyChecking=n
 VMK_LAZY_DEFAULTS=true
 
 # TODO: move to global config?
+VMK_DISK0_FORMAT=
 VMK_DISK0_CACHE=none
 VMK_DISK_CACHE=none
 VMK_INST_DISK0=30g
@@ -250,9 +251,13 @@ function vmk_serial_stdio() {
 }
 
 function vmk_disk0_run() {
+	local format
 	vmk_need_config
 	vmk_config_check disk0
-	echo -n "-drive file=$VMK_DISK0,if=scsi,index=0,cache=$VMK_DISK0_CACHE,media=disk"
+	if ! [ -z "$VMK_DISK0_FORMAT" ]; then
+		format="format=${VMK_DISK0_FORMAT},"
+	fi
+	echo -n "-drive file=$VMK_DISK0,${format}if=scsi,index=0,cache=$VMK_DISK0_CACHE,media=disk"
 }
 
 function vmk_disks_run() {
