@@ -23,6 +23,7 @@ __SSH_BE_HAPPY='-o CheckHostIP=no -o ConnectTimeout=5 -o StrictHostKeyChecking=n
 VMK_LAZY_DEFAULTS=true
 
 # TODO: move to global config?
+VMK_TELNET_BASE=9990
 VMK_NET_TYPE=
 VMK_DISK0_FORMAT=
 VMK_DISK0_CACHE=none
