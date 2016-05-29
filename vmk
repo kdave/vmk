@@ -23,6 +23,7 @@ __SSH_BE_HAPPY='-o CheckHostIP=no -o ConnectTimeout=5 -o StrictHostKeyChecking=n
 VMK_LAZY_DEFAULTS=true
 
 # TODO: move to global config?
+VMK_NET_TYPE=
 VMK_DISK0_FORMAT=
 VMK_DISK0_CACHE=none
 VMK_DISK_CACHE=none
@@ -287,6 +288,21 @@ function vmk_cdrom() {
 	echo -n "-drive file=`vmk_config_iso_path`,if=ide,index=0,media=cdrom"
 }
 
+# networking setup based on user settings
+function vmk_net() {
+	vmk_need_config
+	if [ -z "$VMK_NET_TYPE" ]; then
+		return
+	fi
+	if [ "$VMK_NET_TYPE" = 'user' ]; then
+		return
+	fi
+	if [ "$VMK_NET_TYPE" = 'bridge' ]; then
+		vmk_net_mac
+	fi
+}
+
+# setup network from given MAC, add to bridge
 function vmk_net_mac() {
 	vmk_need_config
 	vmk_config_check vnc
@@ -372,7 +388,7 @@ function vmk_kvm_base() {
 		-no-fd-bootchk			\
 		-pidfile "$VMK_PIDFILE"		\
 		-vnc ":$VMK_VNC"		\
-		`vmk_net_mac`			\
+		`vmk_net`			\
 		`vmk_disk0_run`			\
 		`vmk_disks_run`			\
 		"$@"
