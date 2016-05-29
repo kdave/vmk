@@ -159,7 +159,7 @@ function vmk_show_config_nocheck() {
 	echo "VMK config: vnc         $VMK_VNC"
 	echo "VMK config: MAC        " `vmk_config_vnc_to_mac`
 	echo "VMK config: IP         " `vmk_config_mac_to_ip`
-	echo "VMK config: HOST       " `vmk_config_ip_to_hostname`
+	echo "VMK config: HOSTNAME   " `vmk_config_ip_to_hostname`
 	echo "VMK config: disk        $VMK_DISK0"
 	echo "VMK config: iso         $VMK_ISO"
 	echo "VMK status: SSH key    " `if [ -f 'vm-key' -a 'vm-key.pub' ]; then echo "OK"; else echo "missing or partial"; fi`
@@ -187,16 +187,26 @@ function vmk_config_vnc_to_mac() {
 	printf "$VMK_MAC_BASE_FORMAT" "$VMK_VNC"
 }
 
+# convert MAC to IP unless VMK_IP is set by the user
 function vmk_config_mac_to_ip() {
 	vmk_need_config
 	vmk_config_check vnc
+	if ! [ -z "$VMK_IP" ]; then
+		echo -n "$VMK_IP"
+		return
+	fi
 	local mac=`vmk_config_vnc_to_mac`
 	ip neigh | grep -i "$mac" | awk '{print $1}' | grep '.*\..*\..*\..*'
 }
 
+# convert IP to HOSTNAME unless VMK_HOSTNAME is set by the user
 function vmk_config_ip_to_hostname() {
 	local ip
 	local hn
+	if ! [ -z "$VMK_HOSTNAME" ]; then
+		echo "$VMK_HOSTNAME"
+		return
+	fi
 	ip=`vmk_config_mac_to_ip`
 	[ -z "$ip" ] && return
 	hn=`host "$ip"`
