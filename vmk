@@ -326,9 +326,11 @@ sudo /sbin/brctl addif br0 $1' > ./qemu-ifup
 	fi
 fi
 
-	stat /usr/lib/qemu-bridge-helper | grep -q kvm || { echo "bridge helper not kvm-friendly - group"; exit 1; }
-	stat /usr/lib/qemu-bridge-helper | grep -q 4750 || { echo "bridge helper not kvm-friendly - suid"; exit 1; }
-	grep -q br0 /etc/qemu/bridge.conf || { echo "bridge.conf not set up"; exit 1; }
+	if [ "$VMK_NET_TYPE" = 'bridge' ]; then
+		stat /usr/lib/qemu-bridge-helper | grep -q kvm || { echo "bridge helper not kvm-friendly - group"; exit 1; }
+		stat /usr/lib/qemu-bridge-helper | grep -q 4750 || { echo "bridge helper not kvm-friendly - suid"; exit 1; }
+		grep -q br0 /etc/qemu/bridge.conf || { echo "bridge.conf not set up"; exit 1; }
+	fi
 }
 
 function vmk_check_already_running() {
