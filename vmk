@@ -598,6 +598,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "  sshkeygen	generate new key for the machine"
 	echo "  sshkeyput	put the key to disk0://root/.ssh (mount/umount)"
 	echo "  ssh		ssh into the machine"
+	echo "  scp		scp into the machine"
 	echo "  fixnet		add persistent netowk rule to assign eth0 to first NIC (mount/umount)"
 	echo "  prep		forward to virt-sysprep, applied o disk0"
 	echo "  chroot  mount disk0 and chroot into it, then umount"
@@ -991,6 +992,36 @@ if [ "$VMK_CMD" = 'ssh' -o "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; t
 		echo "INFO: ssh returned with $ret"
 	done
 	(exit $ret)
+fi
+
+if [ "$VMK_CMD" = 'scp' ]; then
+	vmk_need_config
+	if ! vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK: VM not running"
+		exit 1
+	fi
+	vmk_need_key
+
+	host=`vmk_config_ip_to_hostname`
+	if [ -z "$host" ]; then
+		echo "VMK: Cannot resolve hostname, trying IP address"
+		host=`vmk_config_mac_to_ip`
+		if [ -z "$host" ]; then
+			if ! [ -z "$VMK_HOSTNAME" ]; then
+				echo "VMK: using $VMK_HOSTNAME from config"
+				host="$VMK_HOSTNAME"
+			fi
+		fi
+	fi
+	if [ -z "$host" ]; then
+		echo "ERROR: Cannot match MAC with IP or hostname, nor VMK_HOSTNAME set"
+		exit 1
+	fi
+
+	path=${@: -1}
+	# syntax: vmk scp arguments... /path/in/vm
+	echo "SCP into root@$host with vm-key, to path: $path"
+	scp $__SSH_BE_HAPPY -i vm-key "${@:1:$#-1}" "root@$host:$path"
 fi
 
 if [ "$VMK_CMD" = 'fixnet' ]; then
