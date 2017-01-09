@@ -606,7 +606,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "  	WARNING: new rpm may break the DB on older images!"
 	echo "  zypp	dtto (alias for zypper)"
 	echo "  kill	kill the running machine"
-	echo "  mkdisks	create empty disks images (disk1-7)"
+	echo "  mkdisks	create empty disks images (disk1-6)"
 	echo "  putfile	put a given file to VM's /root/vm, local mount of qcow2 image"
 	echo "  checksetup	system capabilities (virt, networking, etc)"
 	echo "  newconfig	generate sample vm-config, print to stdout"
