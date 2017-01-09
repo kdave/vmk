@@ -1182,6 +1182,11 @@ VMK_ISO=product-base.iso'
 
 fi
 
+if [ "$VMK_CMD" = 'vnc' ]; then
+	vmk_need_config
+	vncviewer localhost:${VMK_VNC}
+fi
+
 #set vim:fdm=indent
 #
 # TODO:
