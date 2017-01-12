@@ -978,7 +978,9 @@ if [ "$VMK_CMD" = 'scpkeyput' ]; then
 	fi
 	cmd="mkdir -p /root/.ssh; cat - >> /root/.ssh/authorized_keys"
 	cat vm-key.pub | ssh $__SSH_BE_HAPPY "root@$host" "$cmd"
-	echo "INFO: appended vm-key.pub to authorized_keys, ssh returned $?"
+	ret=$?
+	echo "INFO: appended vm-key.pub to authorized_keys, ssh returned $ret"
+	exit $ret
 fi
 
 if [ "$VMK_CMD" = 'ssh' -o "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; then
@@ -1020,7 +1022,7 @@ if [ "$VMK_CMD" = 'ssh' -o "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; t
 		# TODO: various errors, single error code
 		echo "INFO: ssh returned with $ret"
 	done
-	(exit $ret)
+	exit $ret
 fi
 
 if [ "$VMK_CMD" = 'scp' ]; then
@@ -1051,6 +1053,9 @@ if [ "$VMK_CMD" = 'scp' ]; then
 	# syntax: vmk scp arguments... /path/in/vm
 	echo "SCP into root@$host with vm-key, to path: $path"
 	scp $__SSH_BE_HAPPY -i vm-key "${@:1:$#-1}" "root@$host:$path"
+	ret=$?
+	echo "INFO: scp returned with $ret"
+	exit $ret
 fi
 
 if [ "$VMK_CMD" = 'fixnet' ]; then
