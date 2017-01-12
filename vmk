@@ -597,6 +597,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "  umount	umount disk0 image from mnt/"
 	echo "  sshkeygen	generate new key for the machine"
 	echo "  sshkeyput	put the key to disk0://root/.ssh (mount/umount)"
+	echo "  scpkeyput	put the key to root@VM:/root/.ssh (running VM)"
 	echo "  ssh		ssh into the machine"
 	echo "  scp		scp into the machine"
 	echo "  fixnet		add persistent netowk rule to assign eth0 to first NIC (mount/umount)"
@@ -950,6 +951,34 @@ if [ "$VMK_CMD" = 'sshkeyput' ]; then
 	sudo mkdir -p "$mntdir/root/.ssh"
 	cat vm-key.pub | sudo tee -a "$mntdir/root/.ssh/authorized_keys" > /dev/null
 	vmk_umount "$mntdir"
+fi
+
+if [ "$VMK_CMD" = 'scpkeyput' ]; then
+	vmk_need_key
+	if ! vmk_check_already_running_any; then
+		echo "ERROR: VM not running, please start manually"
+		exit 1
+	fi
+	echo "INFO: you may need to type the password for root@"
+
+	host=`vmk_config_ip_to_hostname`
+	if [ -z "$host" ]; then
+		echo "VMK: Cannot resolve hostname, trying IP address"
+		host=`vmk_config_mac_to_ip`
+		if [ -z "$host" ]; then
+			if ! [ -z "$VMK_HOSTNAME" ]; then
+				echo "VMK: using $VMK_HOSTNAME from config"
+				host="$VMK_HOSTNAME"
+			fi
+		fi
+	fi
+	if [ -z "$host" ]; then
+		echo "ERROR: Cannot match MAC with IP or hostname, nor VMK_HOSTNAME set"
+		exit 1
+	fi
+	cmd="mkdir -p /root/.ssh; cat - >> /root/.ssh/authorized_keys"
+	cat vm-key.pub | ssh $__SSH_BE_HAPPY "root@$host" "$cmd"
+	echo "INFO: appended vm-key.pub to authorized_keys, ssh returned $?"
 fi
 
 if [ "$VMK_CMD" = 'ssh' -o "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; then
