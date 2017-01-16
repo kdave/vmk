@@ -388,6 +388,7 @@ function vmk_kvm_base() {
 		${VMK_MEM:+-m "$VMK_MEM"}	\
 		${VMK_CPU:+-smp "$VMK_CPU"}	\
 		${VMK_NAME:+-name "$VMK_NAME"}	\
+		-rtc base=localtime		\
 		-no-fd-bootchk			\
 		-pidfile "$VMK_PIDFILE"		\
 		-vnc ":$VMK_VNC"		\
