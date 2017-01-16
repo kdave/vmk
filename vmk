@@ -751,10 +751,12 @@ if [ "$VMK_CMD" = 'clone' ]; then
 	vmk_need_config
 	outdir=.
 	name="$VMK_NAME"-clone
-	while getopts o:n: OPT; do
+	keys=false
+	while getopts o:n:k OPT; do
 		case "$OPT" in
 			o) outdir="$OPTARG";;
 			n) name="$OPTARG";;
+			k) keys=true;;
 			*) echo "Unknown clone argument: $OPT"; exit 1;;
 		esac
 	done
@@ -782,6 +784,10 @@ if [ "$VMK_CMD" = 'clone' ]; then
 	echo "Copying config and disk0 image to $outdir/$name"
 	cp -a vm-config "$outdir/$name"
 	vmk_file_cp "$VMK_DISK0" "$outdir/$name/$VMK_DISK0"
+	if $keys; then
+		echo "Copying ssh keys to $outdir/$name"
+		cp -a vm-key vm-key.pub "$outdir/$name"
+	fi
 fi
 
 if [ "$VMK_CMD" = 'set' ]; then
