@@ -890,7 +890,7 @@ if [ "$VMK_CMD" = 'mount' ]; then
 	if [ -z "$image" ]; then
 		if `$VMK_LAZY_DEFAULTS`; then
 			vmk_need_config
-			echo "INFO: lazy mode on"
+			echo "VMK: lazy mode on"
 			image="$VMK_DISK0"
 		else
 			echo "ERROR: no image"
@@ -900,7 +900,7 @@ if [ "$VMK_CMD" = 'mount' ]; then
 	if [ -z "$mntdir" ]; then
 		if `$VMK_LAZY_DEFAULTS`; then
 			vmk_need_config
-			echo "INFO: lazy mode on"
+			echo "VMK: lazy mode on"
 			mntdir="mnt-disk0"
 		else
 			echo "ERROR: no mntdir"
@@ -930,7 +930,7 @@ if [ "$VMK_CMD" = 'umount' ]; then
 	mntdir="$1"
 	if [ -z "$mntdir" ]; then
 		if `$VMK_LAZY_DEFAULTS`; then
-			echo "INFO: lazy mode on"
+			echo "VMK: lazy mode on"
 			mntdir="mnt-disk0"
 		else
 			echo "Expecting argument"
@@ -966,7 +966,7 @@ if [ "$VMK_CMD" = 'scpkeyput' ]; then
 		echo "ERROR: VM not running, please start manually"
 		exit 1
 	fi
-	echo "INFO: you may need to type the password for root@"
+	echo "VMK: you may need to type the password for root@"
 
 	host=`vmk_config_ip_to_hostname`
 	if [ -z "$host" ]; then
@@ -986,7 +986,7 @@ if [ "$VMK_CMD" = 'scpkeyput' ]; then
 	cmd="mkdir -p /root/.ssh; cat - >> /root/.ssh/authorized_keys"
 	cat vm-key.pub | ssh $__SSH_BE_HAPPY "root@$host" "$cmd"
 	ret=$?
-	echo "INFO: appended vm-key.pub to authorized_keys, ssh returned $ret"
+	echo "VMK: appended vm-key.pub to authorized_keys, ssh returned $ret"
 	exit $ret
 fi
 
@@ -1021,13 +1021,13 @@ if [ "$VMK_CMD" = 'ssh' -o "$VMK_CMD" = 'waitssh' -o "$VMK_CMD" = 'sshwait' ]; t
 	echo "SSH (wait=$dowait) into root@$host with vm-key"
 	ssh $__SSH_BE_HAPPY -t -i vm-key "root@$host" "$@"
 	ret=$?
-	echo "INFO: ssh returned with $ret"
+	echo "VMK: ssh returned with $ret"
 	while [ $ret = 255 ] && $dowait; do
 		sleep 1
 		ssh $__SSH_BE_HAPPY -t -i vm-key "root@$host" "$@"
 		ret=$?
 		# TODO: various errors, single error code
-		echo "INFO: ssh returned with $ret"
+		echo "VMK: ssh returned with $ret"
 	done
 	exit $ret
 fi
@@ -1061,18 +1061,18 @@ if [ "$VMK_CMD" = 'scp' ]; then
 	echo "SCP into root@$host with vm-key, to path: $path"
 	scp $__SSH_BE_HAPPY -i vm-key "${@:1:$#-1}" "root@$host:$path"
 	ret=$?
-	echo "INFO: scp returned with $ret"
+	echo "VMK: scp returned with $ret"
 	exit $ret
 fi
 
 if [ "$VMK_CMD" = 'fixnet' ]; then
 	vmk_need_config
-	echo "INFO: mount $VMK_DISK0"
+	echo "VMK: mount $VMK_DISK0"
 	mntdir=`vmk_mount_pre`
-	echo "INFO: fix persistent rules"
+	echo "VMK: fix persistent rules"
 	sudo sed -i -e 's/ATTR{address}=="[^"]\+",//' \
 		"$mntdir/etc/udev/rules.d/70-persistent-net.rules"
-	echo "INFO: umount"
+	echo "VMK: umount"
 	vmk_umount "$mntdir"
 fi
 
@@ -1092,7 +1092,7 @@ fi
 
 if [ "$VMK_CMD" = 'chroot' ]; then
 	vmk_need_config
-	echo "INFO: mount $VMK_DISK0"
+	echo "VMK: mount $VMK_DISK0"
 	mntdir=`vmk_mount_pre`
 
 	sudo mount --bind /dev "$mntdir/sys"
@@ -1116,7 +1116,7 @@ fi
 if [ "$VMK_CMD" = 'zypper' -o "$VMK_CMD" = 'zypp' ]; then
 	# verify mounted
 	if `$VMK_LAZY_DEFAULTS`; then
-		echo "INFO: lazy mode on"
+		echo "VMK: lazy mode on"
 		vmk_need_lazy_mount
 	else
 		echo "Not implemented without lazy defaults"
@@ -1160,19 +1160,19 @@ if [ "$VMK_CMD" = 'putfile' ]; then
 	ownmount=false
 	if ! [ -d "mnt-disk0/etc" ]; then
 		# TODO: merge with mount
-		echo "INFO: lazy mounting disk0"
+		echo "VMK: lazy mounting disk0"
 		mkdir -p $mntdir
 		guestmount -o allow_root -i -a "$image" "$mntdir"
 		ownmount=true
 	else
-		echo "INFO: found lazy mounted disk0"
+		echo "VMK: found lazy mounted disk0"
 	fi
 	target=/root/vm
 	sudo mkdir -p "$mntdir/$target"
 	cp -av -t "$mntdir/$target/." "$@"
 
 	if `$ownmount`; then
-		echo "INFO: umounting"
+		echo "VMK: umounting"
 		vmk_umount "$mntdir"
 	fi
 fi
