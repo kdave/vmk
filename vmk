@@ -590,6 +590,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "	snap run	dtto run on a snapshot, overwrite disk0"
 	echo "	snap runin	dtto runin on a snapshot, overwrite disk0"
 	echo "	snap dsnap	dtto dsnap on a snapshot, overwrite disk0"
+	echo "	snap kill	dtto kill on a snapshot VM"
 	echo "	clone	clone given config and disk0 into a directory"
 	echo "	set	set a variable in the vm-config"
 	echo "	qinstall	quick installation"
@@ -744,6 +745,18 @@ if [ "$VMK_CMD" = 'snap' ]; then
 		ts=`date +%F_%T`
 		echo "Snapshotting $VMK_DISK0 with $ts"
 		vmk_file_cp "$snap" "$snap-$ts"
+	fi
+
+	if [ "$VMK_CMD" = 'kill' ]; then
+		if vmk_check_already_running snap-"$VMK_PIDFILE"; then
+			pid=`vmk_pidfile_pid`
+			echo "Kill snapshot VM, pid $pid (INT, TERM, KILL)"
+			kill -INT "$pid"
+			sleep 1
+			kill -0 "$pid " && kill -TERM "$pid"
+			sleep 1
+			kill -0 "$pid " && kill -KILL "$pid"
+		fi
 	fi
 fi
 
@@ -961,6 +974,7 @@ if [ "$VMK_CMD" = 'sshkeyput' ]; then
 fi
 
 if [ "$VMK_CMD" = 'scpkeyput' ]; then
+	vmk_need_config
 	vmk_need_key
 	if ! vmk_check_already_running_any; then
 		echo "ERROR: VM not running, please start manually"
