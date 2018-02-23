@@ -14,7 +14,7 @@ Dependencies
 * btrfs to store vm images
 * autoyast for installation
 * zypper for installation into locally mounted vm images
-* qemu-bridg-helper for networking
+* qemu-bridge-helper for networking
 * qemu-kvm
 * system utilities:
   * truncate, rm, rmdir, cp, mv, chattr, lsattr, telnet, grep, fusermount, dd, mkfs.fat, mount, umount, chown, chmod, stat, tee, date
