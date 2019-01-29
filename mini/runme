@@ -1,0 +1,69 @@
+#!/bin/sh
+
+ownconfig=false
+fallocate=true
+
+if $ownconfig; then
+	# standalone, no inclusion of runme-config
+	cpu=4
+	mem=2G
+	drives=8
+	telnetport=9901
+	sshport=2201
+	cache=writeback
+	blkif=virtio
+	cleandisk=false
+else
+	echo "RUNME: import config"
+	set -e
+	source ./runme-config
+fi
+
+function reset_drives() {
+	echo "RUNME: reset drive images, drives=$drives, fallocate=$fallocate"
+	for i in `seq $drives`; do
+		p=`readlink -f disk$i`
+		touch "$p"
+		if $cleandisk; then
+			truncate -s 0 "$p"
+		fi
+		chattr +C "$p"
+		if $fallocate; then
+			fallocate -l 12G "$p"
+		else
+			truncate -s 12G "$p"
+		fi
+	done
+}
+
+function list_drives() {
+	d=
+	for i in `seq $drives`; do
+		d="$d -drive file=disk${i},if=$blkif,index=${i},media=disk,cache=$cache,format=raw"
+	done
+	echo -n "$d"
+}
+
+reset_drives
+
+echo "RUNME: start qemu: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
+qemu-system-x86_64							\
+	${guestname:+-name "$guestname"}				\
+	-display none							\
+	-enable-kvm							\
+	-boot c								\
+	-no-reboot							\
+	-device virtio-rng-pci						\
+	-device e1000,netdev=net0					\
+	-netdev user,id=net0,hostfwd=tcp::${sshport}-:22		\
+	-m "$mem"							\
+	-smp "$cpu"							\
+	-device virtio-scsi-pci,id=scsi					\
+	-drive file=root,id=root-img,if=none,format=raw,cache=none	\
+	-device scsi-hd,drive=root-img					\
+	-kernel bzImage							\
+	-append "root=/dev/sda ro console=tty0 console=ttyS0,115200 init=/init.sh"	\
+	-serial telnet:localhost:$telnetport,server,nowait,nodelay	\
+	`list_drives`							\
+	$QEMU_MINI_EXTRA
+

@@ -1,0 +1,23 @@
+#!/bin/sh
+# usage: $0 packages...
+#
+# create minimal root image with the given package installed + dependencies
+
+if [ -z "$1" ]; then
+	echo "ERROR: no package?"
+	exit 1
+fi
+
+root=`pwd`/mnt
+
+mounted=false
+if ! findmnt "$root"; then
+	./root-mount || { echo "ERROR: mount"; exit 1; }
+	mounted=true
+fi
+
+sudo zypper -n --root "$root" --gpg-auto-import-keys ar --no-gpgcheck --refresh http://download.opensuse.org/tumbleweed/repo/oss tw-oss
+sudo zypper -n --root "$root" --gpg-auto-import-keys ref -f
+sudo zypper -v -n --root "$root" --gpg-auto-import-keys install --download-in-advance -l -y --no-recommends "$@"
+
+if $mounted; then ./root-umount; fi

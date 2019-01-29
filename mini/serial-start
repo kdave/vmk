@@ -1,0 +1,20 @@
+#!/bin/sh
+
+port="$1"
+
+set -e
+if [ -f 'runme-config' ]; then
+	source ./runme-config
+	port=$telnetport
+fi
+
+if [ -z "$port" ]; then
+	echo "usage: $0 port"
+	echo "or set up telnetport in runme-config"
+	exit 1
+fi
+
+echo "INFO: listen on port $port"
+script -f -a -c "./waittelnet localhost $port" serial.log
+
+stty sane

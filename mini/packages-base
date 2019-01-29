@@ -1,0 +1,15 @@
+coreutils
+procps
+util-linux
+which
+kmod
+sed
+grep
+bash
+gzip
+xz
+hostname
+shadow
+mc
+screen
+tmux

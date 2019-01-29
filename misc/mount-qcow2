@@ -1,0 +1,23 @@
+#!/bin/sh -x
+
+# $0 qcow2 mnt
+
+if [ -z "$1" -o -z "$2" ]; then
+	echo usage: $0 qcow2 mnt
+	exit 1
+fi
+
+sudo modprobe nbd max_part=63
+if ! cat /proc/modules | grep -q nbd; then
+	echo NBD needed
+	exit 1
+fi
+
+# todo: find free
+qemu-nbd "$1" &
+echo $! > ."$2".pid
+# todo: write for root
+sudo nbd-client localhost 10809 /dev/nbd0
+sudo mount /dev/nbd0p1 "$2"
+
+ps aux|grep nbd

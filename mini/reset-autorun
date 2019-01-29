@@ -1,0 +1,8 @@
+#!/bin/sh
+
+./root-mount || { echo "ERROR: no mount"; exit 1; }
+
+echo "Clear autorun.sh"
+sudo rm -vf mnt/autorun.sh
+
+./root-umount

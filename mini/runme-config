@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# -cpu
+cpu=4
+# -m
+mem=2G
+# number of disk# files
+drives=8
+# telnet port
+tport=9901
+# sshport
+sshport=2201
+# blockdev cache type
+cache=writeback
+# blockdev if
+blkif=virtio

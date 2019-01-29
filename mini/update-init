@@ -1,0 +1,7 @@
+#!/bin/sh -x
+
+./root-mount || { echo "ERROR: no mount"; exit 1; }
+
+sudo cp init.sh mnt
+
+./root-umount

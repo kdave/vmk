@@ -1,0 +1,6 @@
+#!/bin/sh
+
+mkdir -p mnt
+if ! findmnt mnt; then
+	sudo mount -o loop root mnt
+fi

@@ -1,0 +1,11 @@
+#!/bin/sh
+# install packages from list given in the file
+# TOOD: merge with install-pkg
+
+if ! [ -f "$1" ]; then
+	echo "ERROR: gimmea file"
+	exit 1
+fi
+
+f="$1"
+./install-pkg `cat "$f"`

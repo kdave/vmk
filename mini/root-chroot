@@ -1,0 +1,13 @@
+#!/bin/sh
+
+./root-mount || exit 1
+
+sudo mount --bind /proc mnt/proc
+sudo mount --bind /sys mnt/sys
+sudo mount --bind /dev mnt/dev
+
+sudo chroot mnt /bin/bash
+
+sudo umount mnt/proc mnt/sys mnt/dev
+
+./root-umount

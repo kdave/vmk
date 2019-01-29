@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# usage: $0 name [size]
+name="$1"
+size="$2"
+if [ -z "$size" ]; then
+	size=10g
+fi
+if [ -z "$name" ]; then
+	name=image-"$size"-`date +%Y%m%d-%H%M%S`
+fi
+name="${name%%.qcow2}"
+qemu-img create -f qcow2 "$name.qcow2" "$size"
