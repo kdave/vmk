@@ -840,6 +840,11 @@ if [ "$VMK_CMD" = 'set' ]; then
 	esac
 fi
 
+if [ "$VMK_CMD" = 'mkdisk0' ]; then
+	vmk_need_config
+	vmk_inst_default_disk0
+fi
+
 if [ "$VMK_CMD" = 'qinstall' ]; then
 	vmk_need_config
 	if $VMK_HAS_CONFIG; then
