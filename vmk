@@ -166,6 +166,7 @@ function vmk_show_config_nocheck() {
 	echo "VMK config: disk        $VMK_DISK0"
 	echo "VMK config: iso         $VMK_ISO"
 	echo "VMK status: SSH key    " `if [ -f 'vm-key' -a 'vm-key.pub' ]; then echo "OK"; else echo "missing or partial"; fi`
+	echo "VMK config: kernel     "`vmk_kernel_initrd`
 }
 
 # fail with an error message if the given entry is empty, use only for
@@ -410,6 +411,21 @@ function vmk_kvm_default() {
 	vmk_kvm_bg_telnet `vmk_cdrom` "$@"
 }
 
+function vmk_kernel_initrd() {
+	vmk_need_config
+	local ker
+	local ird
+
+	if [ -n "$VMK_KERNEL" ]; then
+		ker="-kernel $VMK_KERNEL"
+	fi
+	if [ -n "$VMK_INITRD" ]; then
+		ird="-initrd $VMK_INITRD"
+	fi
+
+	echo -n "$ker $ird"
+}
+
 function vmk_config_iso_path() {
 	vmk_need_config
 	local isofile
@@ -641,10 +657,10 @@ if [ "$VMK_CMD" = 'run' -o "$VMK_CMD" = 'runin' ]; then
 
 	if [ "$VMK_CMD" = 'run' ]; then
 		echo "daemonizing, run: telnet localhost" $(vmk_vnc_to_telnet)
-		vmk_kvm_default
+		vmk_kvm_default `vmk_kernel_initrd`
 	else	# runin
 		echo "foreground run, console is stdio, ctrl-C kills"
-		vmk_kvm_base `vmk_cdrom` `vmk_serial_default`
+		vmk_kvm_base `vmk_cdrom` `vmk_serial_default` `vmk_kernel_initrd`
 	fi
 fi
 
