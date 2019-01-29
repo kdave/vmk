@@ -602,6 +602,7 @@ if [ "$VMK_CMD" = 'help' ]; then
 	echo "  scpkeyput	put the key to root@VM:/root/.ssh (running VM)"
 	echo "  ssh		ssh into the machine"
 	echo "  scp		scp into the machine"
+	echo "  sshfs           mount root of a running VM via sshfs (use ssh key)"
 	echo "  fixnet		add persistent netowk rule to assign eth0 to first NIC (mount/umount)"
 	echo "  prep		forward to virt-sysprep, applied o disk0"
 	echo "  chroot  mount disk0 and chroot into it, then umount"
@@ -1189,6 +1190,23 @@ if [ "$VMK_CMD" = 'putfile' ]; then
 		echo "VMK: umounting"
 		vmk_umount "$mntdir"
 	fi
+fi
+
+if [ "$VMK_CMD" = 'sshfs' ]; then
+	vmk_need_config
+	if ! vmk_check_already_running "$VMK_PIDFILE"; then
+		echo "VMK: vm not running"
+		exit 1
+	fi
+
+	mntdir=${1:-sshfs}
+	mkdir -p "$mntdir"
+	if findmnt `readlink -f "$mntdir"`; then
+		echo "VMK: mountpont $mntdir seems to be mounted"
+		exit 1
+	fi
+	sshfs -o allow_root,IdentityFile=`pwd`/vm-key root@"${VMK_HOSTNAME}":/ sshfs
+	echo "VMK: mounted"
 fi
 
 if [ "$VMK_CMD" = 'isrunning' ]; then
