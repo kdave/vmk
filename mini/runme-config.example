@@ -7,7 +7,7 @@ mem=2G
 # number of disk# files
 drives=8
 # telnet port
-tport=9901
+telnetport=9901
 # sshport
 sshport=2201
 # blockdev cache type
