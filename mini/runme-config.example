@@ -14,3 +14,7 @@ sshport=2201
 cache=writeback
 # blockdev if
 blkif=virtio
+# git dir with kernel
+gitdir=/tmp
+# recreate disk images before starting
+cleandisk=true
