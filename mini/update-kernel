@@ -1,0 +1,32 @@
+#!/bin/sh
+
+function die(){ echo "ERROR: $@"; exit 1; }
+dir="$1"
+here=`pwd`
+
+if [ -f 'runme-config' ]; then
+	source ./runme-config
+	dir=$gitdir
+fi
+
+cd "$dir" || die 'cannot go to git'
+
+cp arch/x86/boot/bzImage "$here" || die "no bzImage"
+rm -rf "$here/mods-tmp"
+make modules_install INSTALL_MOD_PATH="$here/mods-tmp" || die "no modules"
+
+cd "$here" || die 'cannot go back'
+
+rm -rf "mods-old"
+#if [ -d 'mods' ]; then mv mods mods-old; fi
+if [ -d 'mods' ]; then rm -rf mods; fi
+mv mods-tmp mods || die "cannot finalize mods"
+
+modspath=$(cd mods && ls -d1 lib/modules/*)
+[ -z "$modspath" ] && die "cannot find module path inside mods/"
+
+echo "=== rsync to root path $modspath"
+./root-mount || die 'cannot mount'
+rm -rf "mnt/$modspath"
+sudo rsync -vaxAXPH mods/. mnt || die "cannot rsync"
+./root-umount
