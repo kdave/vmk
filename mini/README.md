@@ -24,3 +24,19 @@ overall
 networking
 * virtio
   * `CONFIG_VIRTIO_NET`
+
+
+Dependencies
+------------
+
+* qemu
+* dumb-init: static version of libc
+* e2fsprogs (mkfs root)
+* script, telnet
+
+
+TODO
+----
+
+* cache RPMs from the VM after installation
+
