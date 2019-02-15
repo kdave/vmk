@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# expects:
+# * VM is running
+
+vmk ssh 'poweroff'
+while vmk isrunning; do
+	echo "VM still running, wait 1 sec"
+	sleep 1
+done

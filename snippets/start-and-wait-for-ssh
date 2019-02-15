@@ -1,0 +1,10 @@
+#!/bin/sh
+# start VM and wait for ssh access
+
+# expects:
+# * ssh access is set up
+# * VM is not running already
+
+vmk run
+sleep 10
+vmk waitssh 'date'

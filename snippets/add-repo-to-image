@@ -1,0 +1,22 @@
+#!/bin/sh
+# add repository to a mounted VM image (VM not running)
+
+# EXPECTS:
+# vmk mount
+
+repo=http://download.opensuse.org/repositories/filesystems/openSUSE_13.2
+alias=obs-filesystems
+match='repositories/filesystems'
+prio=99
+
+if vmk zypper lr -u | egrep "$match"; then
+        echo repo there
+else
+        vmk zypper -n --gpg-auto-import-keys ar "$repo" "$alias"
+        vmk zypper -n --gpg-auto-import-keys mr -p "$prio" --refresh "$alias"
+fi
+
+# optional
+vmk zypper -n --gpg-auto-import-keys ref "$alias"
+
+# vmk umount
