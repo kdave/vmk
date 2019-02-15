@@ -27,7 +27,8 @@ if [ "$net" = 1 ]; then
 fi
 
 if [ -f '/autorun.sh' ]; then
-	echo "INIT: autorun.sh found, starting in 3 seconds, press key to skip"
+	full=$(readlink -f /autorun.sh)
+	echo "INIT: autorun.sh ($full) found, starting in 3 seconds, press key to skip"
 	x=
 	for i in 2 1 0; do
 		read -N 1 -t 1 x
