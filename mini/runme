@@ -27,7 +27,8 @@ function reset_drives() {
 		if $cleandisk; then
 			truncate -s 0 "$p"
 		fi
-		chattr +C "$p"
+		# on btrfs we need +C, otherwise don't want to fail
+		chattr +C "$p" || true
 		if $fallocate; then
 			fallocate -l 12G "$p"
 		else
