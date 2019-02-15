@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh -x -e
 
 if [ -f root ]; then
 	echo "ERROR: already there, will not setup"
@@ -6,7 +6,7 @@ if [ -f root ]; then
 fi
 
 truncate -s 10G root
-mkfs.ext2 root
+/sbin/mkfs.ext2 root
 
 for p in packages-*; do
 	./install-list "$p"
