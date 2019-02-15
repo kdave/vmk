@@ -17,6 +17,8 @@ cache=writeback
 blkif=virtio
 # recreate disk images before starting (truncate or fallocate)
 cleandisk=true
+# use fallocate to for the drives, or just truncate (default: fallocate)
+drivefallocate=true
 
 ## Connection
 

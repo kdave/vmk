@@ -13,10 +13,17 @@ if $ownconfig; then
 	cache=writeback
 	blkif=virtio
 	cleandisk=false
+	drivefallocate=true
 else
 	echo "RUNME: import config"
 	set -e
 	source ./runme-config
+
+fi
+
+# validate and transfer config values
+if [ "$drivefallocate" = false ]; then
+	fallocate=false
 fi
 
 function reset_drives() {
