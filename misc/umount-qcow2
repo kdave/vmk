@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ -z "$1" ]; then
+	echo usage: $0 mntdir
+	exit 1
+fi
+
+pidf=."$1".pid
+
+if ! [ -f "$pidf" ]; then
+	echo no pid file to kill, do it manually: killall qemu-nbd
+	exit 2
+fi
+
+sudo umount "$1" && kill `cat "$pidf"` && rm -- "$pidf"

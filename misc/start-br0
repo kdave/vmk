@@ -1,0 +1,12 @@
+#!/bin/sh
+
+iface=eth0
+briface=br0
+
+sudo modprobe tun
+sudo brctl addbr $briface
+sudo brctl addif $briface $iface
+sudo ifconfig $iface 0.0.0.0
+sudo ifconfig $briface up
+# dhcpcd or dhclient ...
+sudo dhcpcd $briface

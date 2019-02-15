@@ -1,0 +1,5 @@
+#!/bin/sh
+# Bring the TAP bridge network up, and intereface with br0
+sudo /sbin/ifconfig $1 up
+sudo /sbin/brctl addif br0 $1
+
