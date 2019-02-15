@@ -1,0 +1,18 @@
+#!/usr/bin/sh
+
+# 0 | 2
+# -----
+# 1
+layout1() {
+	tmux splitw -t 0   -d -v -p 30 './serial-start'
+	tmux splitw -t 0   -d -h -p 50 './tail-log'
+}
+
+# 0 | 1
+# 2 |
+layout2() {
+	tmux splitw -t 0   -d -h -p 50 './tail-log'
+	tmux splitw -t 0   -d -v -p 70 './serial-start'
+}
+
+layout2
