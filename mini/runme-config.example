@@ -19,6 +19,8 @@ blkif=virtio
 cleandisk=true
 # use fallocate to for the drives, or just truncate (default: fallocate)
 drivefallocate=true
+# size of the drive (default: 12G, format accepted by fallocate or truncate)
+drivesize=12G
 
 ## Connection
 

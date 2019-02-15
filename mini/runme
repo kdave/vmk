@@ -14,6 +14,7 @@ if $ownconfig; then
 	blkif=virtio
 	cleandisk=false
 	drivefallocate=true
+	drivesize=12G
 else
 	echo "RUNME: import config"
 	set -e
@@ -24,6 +25,9 @@ fi
 # validate and transfer config values
 if [ "$drivefallocate" = false ]; then
 	fallocate=false
+fi
+if [ -z "$drivesize" ]; then
+	drivesize=12G
 fi
 
 function reset_drives() {
@@ -37,9 +41,9 @@ function reset_drives() {
 		# on btrfs we need +C, otherwise don't want to fail
 		chattr +C "$p" || true
 		if $fallocate; then
-			fallocate -l 12G "$p"
+			fallocate -l "$drivesize" "$p"
 		else
-			truncate -s 12G "$p"
+			truncate -s "$drivesize" "$p"
 		fi
 	done
 }
