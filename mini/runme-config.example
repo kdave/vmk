@@ -1,20 +1,31 @@
 #!/bin/sh
 
-# -cpu
+## Generic
+guestname=vm0
+
+## Machine type
 cpu=4
-# -m
 mem=2G
-# number of disk# files
-drives=8
+
+## Drives
+
+# number of disk# files (symlinks are ok, always resolved)
+drives=0
+# blockdev cache type (default: writeback)
+cache=writeback
+# blockdev interface type (default: virtio)
+blkif=virtio
+# recreate disk images before starting (truncate or fallocate)
+cleandisk=true
+
+## Connection
+
 # telnet port
 telnetport=9901
 # sshport
 sshport=2201
-# blockdev cache type
-cache=writeback
-# blockdev if
-blkif=virtio
+
+## Kernel
+
 # git dir with kernel
 gitdir=/tmp
-# recreate disk images before starting
-cleandisk=true
