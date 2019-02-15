@@ -1,12 +1,23 @@
 #!/bin/sh
 
+# install modules and kernel image from source directory
+#
+# usage: $0 [dir]
+
 function die(){ echo "ERROR: $@"; exit 1; }
-dir="$1"
 here=`pwd`
 
-if [ -f 'runme-config' ]; then
-	source ./runme-config
-	dir=$gitdir
+if [ -z "$1" ]; then
+	if [ -f 'runme-config' ]; then
+		source ./runme-config
+		echo "Update from config path: $gitdir"
+		dir=$gitdir
+	else
+		die "no path given and config not found"
+	fi
+else
+	dir="$1"
+	echo "Update from path: $dir"
 fi
 
 cd "$dir" || die 'cannot go to git'
