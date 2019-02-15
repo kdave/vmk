@@ -1,8 +1,22 @@
 #!/bin/sh
 
+# reset autorun or set to a specific script
+# usage: $0 [script]
+#
+# the script will be placed to the root
+
 ./root-mount || { echo "ERROR: no mount"; exit 1; }
 
-echo "Clear autorun.sh"
-sudo rm -vf mnt/autorun.sh
+if [ -z "$1" ]; then
+	echo "Clear autorun.sh"
+	sudo rm -vf mnt/autorun.sh
+else
+	if ! [ -f "$1" ]; then
+		echo "ERROR: autorun script not found"
+	else
+		echo "Set autorun to: $1"
+		sudo ln -sf "/$1" mnt/autorun.sh
+	fi
+fi
 
 ./root-umount
