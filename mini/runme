@@ -36,6 +36,11 @@ function reset_drives() {
 	echo "RUNME: reset drive images: drives=$drives fallocate=$fallocate path=$bn"
 	for i in `seq $drives`; do
 		p=`readlink -f disk$i`
+		# skip initializing block devices
+		if [ -b "$p" ]; then
+			echo "Skip initialization of disk${i}: $p"
+			continue
+		fi
 		touch "$p"
 		if $cleandisk; then
 			truncate -s 0 "$p"
