@@ -35,6 +35,25 @@ Dependencies
 * script, telnet
 
 
+Minimal VM template
+-------------------
+
+Base:
+
+- root (set up by setup-root.sh)
+- dumb-init
+- init.sh, update-init
+- root-mount, root-umount
+- runme, runme-config
+- serial-start, waittelnet
+- update-kernel
+- update-root-dist
+
+Optional:
+
+- fstests.tar.gz (symlink), run-fstests.sh, update-fstests.sh
+
+
 TODO
 ----
 
