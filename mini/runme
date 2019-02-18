@@ -31,7 +31,9 @@ if [ -z "$drivesize" ]; then
 fi
 
 function reset_drives() {
-	echo "RUNME: reset drive images, drives=$drives, fallocate=$fallocate"
+	bn=$(readlink -f disk1)
+	bn=$(dirname "$bn")
+	echo "RUNME: reset drive images: drives=$drives fallocate=$fallocate path=$bn"
 	for i in `seq $drives`; do
 		p=`readlink -f disk$i`
 		touch "$p"
