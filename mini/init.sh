@@ -12,6 +12,8 @@ echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/mount -t devpts none /dev/pts
 /usr/bin/mount -t debugfs none /sys/kernel/debug
 
+ip a add 127.0.0.1/8 dev lo
+
 export PS1='\u@\h:\w\$ '
 export PATH=/bin:/sbin:/usr/bin/:/usr/sbin
 export SHELL=/bin/bash
