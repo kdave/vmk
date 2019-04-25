@@ -1,0 +1,12 @@
+#!/bin/sh
+root=`pwd`/mnt
+
+mounted=false
+if ! findmnt "$root"; then
+	./root-mount || { echo "ERROR: mount"; exit 1; }
+	mounted=true
+fi
+
+sudo zypper --root "$root" -v sh
+
+if $mounted; then ./root-umount; fi
