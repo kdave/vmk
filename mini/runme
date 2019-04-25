@@ -58,7 +58,7 @@ function reset_drives() {
 function list_drives() {
 	d=
 	for i in `seq $drives`; do
-		d="$d -drive file=disk${i},if=$blkif,index=${i},media=disk,cache=$cache,format=raw"
+		d="$d -drive file=disk${i},if=$blkif,index=${i},media=disk,cache=$cache,format=raw,discard=on"
 	done
 	echo -n "$d"
 }
