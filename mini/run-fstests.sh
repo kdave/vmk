@@ -30,7 +30,8 @@ export TEST_DIR=/tmp/test
 unset SCRATCH_DEV
 # 1234567
 # bcdefgh
-export SCRATCH_DEV_POOL=$(echo /dev/vd[b-h])
+export SCRATCH_DEV_POOL=$(echo /dev/vd[b-g])
+export LOGWRITES_DEV=/dev/vdh
 export SCRATCH_MNT=/tmp/scratch
 export FSTYP=btrfs
 export MKFS_OPTIONS='-K -f'
