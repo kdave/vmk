@@ -9,3 +9,5 @@ btrfsprogs
 strace
 device-mapper
 lvm
+duperemove
+
