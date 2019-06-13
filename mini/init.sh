@@ -22,10 +22,15 @@ export SHELL=/bin/bash
 #/dumb-init /sbin/agetty -a root ttyS1 linux &
 
 if [ "$net" = 1 ]; then
+	echo "INIT: remount / read-write"
+	mount -o remount,rw /
 	echo "INIT: set up networking, ssh"
 	/usr/bin/ifconfig eth0 up
 	/sbin/dhclient eth0
-	/usr/sbin/sshd -p 22
+	if ! /usr/sbin/sshd; then
+		/usr/sbin/sshd-gen-keys-start
+		/usr/sbin/sshd
+	fi
 fi
 
 if [ -f '/autorun.sh' ]; then
