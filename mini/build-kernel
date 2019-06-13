@@ -1,0 +1,24 @@
+#!/bin/sh
+# build kernel in the configured directory
+# usage: $0 [command to run there]
+
+function die(){ echo "ERROR: $@"; exit 1; }
+here=`pwd`
+
+if [ -f 'runme-config' ]; then
+	source ./runme-config
+	echo "Update from config path: $gitdir"
+	dir=$gitdir
+else
+	die "no path given and config not found"
+fi
+
+cd "$dir" || die 'cannot go to git'
+
+if [ -z "$1" ]; then
+	echo "Run: make"
+	make
+else
+	echo "Run: $@"
+	"$@"
+fi
