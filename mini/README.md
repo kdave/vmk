@@ -6,10 +6,11 @@ Starring:
 * `dumb-init` as pid 1 process manager
 * `init.sh` as the service manager
 * `bash` as the shell
+* `bzImage` as the kernel without his initrd companion
 
 Device configuration (WIP):
 
-qemu block device interfaces:
+QEMU block device interfaces:
 
 * IDE
 * SCSI
@@ -29,8 +30,8 @@ networking
 Dependencies
 ------------
 
-* qemu
-* dumb-init: static version of libc
+* qemu (KVM)
+* dumb-init: built with static version of libc
 * e2fsprogs (mkfs root)
 * script, telnet
 
@@ -53,9 +54,37 @@ Optional:
 
 - fstests.tar.gz (symlink), run-fstests.sh, update-fstests.sh
 
+Package management:
 
-TODO
-----
+- install-pkg, install-list, install-sh
 
-* cache RPMs from the VM after installation
+Autorun:
 
+- reset-autorun
+- update-autorun.sh
+
+
+Workflow
+--------
+
+The VM is set up, installed. Check that runme-config has the path to linux.git,
+otherwise you can specify it as an argument.
+
+- cd linux.git
+- make olconfig && make
+- cd vm
+- ./update-kernel
+- ./runme
+
+Without autorun, this will end with shell. Otherwise script /autorun.sh will
+start in 3 seconds, press any key to stop it and got back to shell.
+
+
+Other
+-----
+
+Configuration:
+
+* IDE provides only 4 devices
+* SCSI is unstable and the driver crashes under heavy load
+* VIRTIO works best it seems
