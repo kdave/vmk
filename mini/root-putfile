@@ -1,0 +1,15 @@
+#!/bin/sh
+# usage: $0 file [target/path]
+
+./root-mount || { echo "ERROR: no mount"; exit 1; }
+
+if ! [ -f "$1" ]; then
+	echo "ERROR: file not found: $1"
+	exit 1
+else
+	echo "Copy $1 to root/$2"
+	sudo mkdir -p "mnt/$2"
+	sudo cp "$1" "mnt/$2"
+fi
+
+./root-umount
