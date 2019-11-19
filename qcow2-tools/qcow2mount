@@ -1,0 +1,32 @@
+#!/bin/sh
+# usage: $0 qcow [partno]
+
+set -e
+
+qcow="$1"
+nbd=/dev/nbd7
+nbdbase=$(basename "$nbd")
+sudo=sudo
+mnt=mnt-$$
+part=${2:-1}
+
+MSG() { echo === "$@"; }
+
+if grep "$nbdbase" /proc/partitions; then
+	echo "ERROR: found $nbd in partitions"
+	exit 1
+fi
+
+if ! [ -f "$qcow" ]; then
+	echo "ERROR: no qcow2 $qcow"
+	exit 1
+fi
+
+MSG open qcow as nbd
+$sudo qemu-nbd --discard=unmap -c "$nbd" "$qcow"
+
+MSG mount to "$mnt"
+mkdir "$mnt"
+$sudo mount "${nbd}p$part" "$mnt"
+
+MSG close nbd with: "$sudo qemu-nbd -d $nbd"
