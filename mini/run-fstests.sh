@@ -13,6 +13,7 @@ set -eu
 set -- "$@"
 
 PHASE="${1:-all}"
+FSTESTSCONFIGBASE=/
 
 cd /tmp
 
@@ -27,6 +28,8 @@ if [ "$PHASE" = 'build' -o "$PHASE" = 'all' ]; then
 	make -j 4
 fi
 
+# pwd is now /tmp/fstests
+
 if [ "$PHASE" = 'prep' -o "$PHASE" = 'all' ]; then
 	mkdir -p /tmp/test /tmp/scratch
 
@@ -37,63 +40,48 @@ if [ "$PHASE" = 'prep' -o "$PHASE" = 'all' ]; then
 	id fsgqa || useradd fsgqa
 	getent group fsgqa || groupadd fsgqa
 	mkdir -p /home/fsgqa
-	mount -o remount,ro /
+	mount -o remount,ro / || true
+fi
+
+# preset name
+# CMD has only one word $W, expected to be fstests.$W that is linked
+# to /tmp/fstests/
+CMD=$(grep -oP "(?<=fstests=)([^ ]*)" < /proc/cmdline || true)
+PRESET=$CMD
+PRESET=${PRESET:-default}
+pfile="$FSTESTSCONFIGBASE/fstests.$PRESET"
+if [ -f "$pfile" ]; then
+	echo "FSTESTS: link preset $pfile to fstests"
+	ln -sf "$pfile" local.config
 fi
 
 if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
-	export TEST_DEV=/dev/vda
-	export TEST_DIR=/tmp/test
-	#export SCRATCH_DEV=/dev/vdb
-	unset SCRATCH_DEV
-	# 1234567
-	# bcdefgh
-	export SCRATCH_DEV_POOL=$(echo /dev/vd[b-g])
-	export LOGWRITES_DEV=/dev/vdh
-	export SCRATCH_MNT=/tmp/scratch
-	export FSTYP=btrfs
-	export MKFS_OPTIONS='-K -f'
-	export MOUNT_OPTIONS='-o discard'
-fi
-
-FSTESTS=${FSTESTS:-basic}
-GROUP=all
-#CMD=$(grep "fstests=[^ ]*" < /proc/cmdline)
-CMD=
-
-if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
-	echo "CMD: $CMD, FSTESTS: $FSTESTS"
-
-	if ! [ -z "$CMD" ]; then
-		V=${CMD#*=}
-		if [ "$V" = 'full' ]; then
-			FSTESTS=full
-		fi
-	fi
-
-	echo "START FSTESTS: $FSTESTS group=$GROUP"
-
-	if [ "$FSTESTS" = 'basic' ]; then
-		mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
-		./check -T -g "$GROUP"
-	elif [ "$FSTESTS" = 'full' ]; then
-
-		echo "=== MARKER: defaults"
+	if [ -f "local.config" ]; then
+		echo "FSTESTS: source local.config (`readlink -f local.config`)"
+		echo "===="
+		# sectioned config not supported, can't find TEST_DEV/TEST_MNT
+		# to precreate and it fails later
+		source ./local.config
+		cat ./local.config
+		echo "===="
+	else
+		# fallback config
+		echo "FSTESTS: using built-in config"
+		export TEST_DEV=/dev/vda
+		export TEST_DIR=/tmp/test
+		unset SCRATCH_DEV
+		export SCRATCH_DEV_POOL=$(echo /dev/vd[b-g])
+		export LOGWRITES_DEV=/dev/vdh
+		export SCRATCH_MNT=/tmp/scratch
+		export FSTYP=btrfs
 		export MKFS_OPTIONS='-K -f'
 		export MOUNT_OPTIONS=''
-		mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
-		./check -T -g "$GROUP"
-		echo '=== MARKER: results'
-
-		umount "$TEST_DEV" "$SCRATCH_MNT"
-
-		echo "=== MARKER: mkfs no-hole, mount fst"
-		export MKFS_OPTIONS='-K -f -O no-holes'
-		export MOUNT_OPTIONS='-o space_cache=v2'
-		mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
-		./check -T -g "$GROUP"
-		echo '=== MARKER: results'
-	else
-		mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
-		./check -T $FSTESTS
 	fi
+fi
+
+if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
+	echo "FSTESTS: mkfs test dev"
+	mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
+	echo "START FSTESTS"
+	./check -T -g all
 fi
