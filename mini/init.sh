@@ -1,6 +1,7 @@
 #!/dumb-init /bin/bash
 
 net=0
+cgroups=1
 
 echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/mount -t proc none /proc
@@ -11,6 +12,10 @@ echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/ln -s /proc/self/fd /dev/fd
 /usr/bin/mount -t devpts none /dev/pts
 /usr/bin/mount -t debugfs none /sys/kernel/debug
+if [ "$cgroup" = 1 ]; then
+	/usr/bin/mount -t cgroup none /sys/fs/cgroup
+	/usr/bin/mount -t cgroup2 none /sys/fs/cgroup/unified
+fi
 
 ip a add 127.0.0.1/8 dev lo
 
@@ -43,6 +48,13 @@ if [ -f '/autorun.sh' ]; then
 		[ "$x" != '' ] && break
 	done
 	if [ "$x" = '' ]; then
+		if [ "$cgroup" = 1 ]; then
+			echo "INIT: enable cgroups"
+			mkdir -p /sys/fs/cgroup/foo
+			echo $$ > /sys/fs/cgroup/foo/cgroup.procs
+			echo +io +memory > /sys/fs/cgroup/foo/cgroup.contollers
+		fi
+
 		echo "INIT: start autorun"
 		/autorun.sh
 		echo "INIT: autorun finished, back to shell"
