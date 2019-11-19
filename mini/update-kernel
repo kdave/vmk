@@ -38,6 +38,6 @@ modspath=$(cd mods && ls -d1 lib/modules/*)
 
 echo "=== rsync to root path $modspath"
 ./root-mount || die 'cannot mount'
-rm -rf "mnt/$modspath"
+rm -rf "mnt/$modspath" || sudo rm -rf -- "mnt/$modspath"
 sudo rsync -vaxAXPH mods/. mnt || die "cannot rsync"
 ./root-umount
