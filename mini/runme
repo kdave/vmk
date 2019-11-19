@@ -73,6 +73,7 @@ qemu-system-x86_64							\
 	${guestname:+-name "$guestname"}				\
 	-display none							\
 	-enable-kvm							\
+	-cpu host \
 	-boot c								\
 	-no-reboot							\
 	-device virtio-rng-pci						\
