@@ -3,6 +3,9 @@
 ownconfig=false
 fallocate=true
 
+# append to kernel command line
+APPEND=${1:+fstests=$1}
+
 if $ownconfig; then
 	# standalone, no inclusion of runme-config
 	cpu=4
@@ -81,7 +84,7 @@ qemu-system-x86_64							\
 	-drive file=root,id=root-img,if=none,format=raw,cache=none	\
 	-device scsi-hd,drive=root-img					\
 	-kernel bzImage							\
-	-append "root=/dev/sda ro console=tty0 console=ttyS0,115200 init=/init.sh"	\
+	-append "root=/dev/sda ro console=tty0 console=ttyS0,115200 init=/init.sh $APPEND"	\
 	-serial telnet:localhost:$telnetport,server,nowait,nodelay	\
 	`list_drives`							\
 	$QEMU_MINI_EXTRA
