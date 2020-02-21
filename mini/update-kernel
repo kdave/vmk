@@ -22,6 +22,9 @@ fi
 
 cd "$dir" || die 'cannot go to git'
 
+br=`git branch | grep '^*'`
+echo "git branch: $br"
+
 cp arch/x86/boot/bzImage "$here" || die "no bzImage"
 rm -rf "$here/mods-tmp"
 make modules_install INSTALL_MOD_PATH="$here/mods-tmp" || die "no modules"
@@ -41,3 +44,5 @@ echo "=== rsync to root path $modspath"
 rm -rf "mnt/$modspath" || sudo rm -rf -- "mnt/$modspath"
 sudo rsync -vaxAXPH mods/. mnt || die "cannot rsync"
 ./root-umount
+
+echo "git branch: $br"
