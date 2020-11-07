@@ -23,7 +23,9 @@ fi
 cd "$dir" || die 'cannot go to git'
 
 br=`git branch | grep '^*'`
-echo "git branch: $br"
+sha=`git --no-pager log -1 --format='%h'`
+subj=`git --no-pager log -1 --format='%s'`
+echo "git: ($br) $sha \"$subj\""
 
 cp arch/x86/boot/bzImage "$here" || die "no bzImage"
 rm -rf "$here/mods-tmp"
@@ -45,4 +47,4 @@ rm -rf "mnt/$modspath" || sudo rm -rf -- "mnt/$modspath"
 sudo rsync -vaxAXPH mods/. mnt || die "cannot rsync"
 ./root-umount
 
-echo "git branch: $br"
+echo "git: ($br) $sha \"$subj\""
