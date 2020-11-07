@@ -2,6 +2,9 @@
 
 ownconfig=false
 fallocate=true
+platform=`uname -i`
+machine=
+image=
 
 # append to kernel command line
 APPEND=
@@ -40,6 +43,12 @@ if [ -z "$drivesize" ]; then
 	drivesize=12G
 fi
 
+case "$platform" in
+	x86_64)  image=bzImage;;
+	aarch64) image=Image; machine=virt;;
+	*) echo "ERROR: unsupported platform $platform"; exit 1;;
+esac
+
 function reset_drives() {
 	bn=$(readlink -f disk1)
 	bn=$(dirname "$bn")
@@ -76,12 +85,13 @@ function list_drives() {
 reset_drives
 
 echo "RUNME: append: $APPEND"
-echo "RUNME: start qemu: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
-qemu-system-x86_64							\
+echo "RUNME: start qemu $platform: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
+qemu-system-$platform							\
 	${guestname:+-name "$guestname"}				\
 	-display none							\
 	-enable-kvm							\
-	-cpu host \
+	-cpu host							\
+	${machine:+-machine "$machine"}					\
 	-boot c								\
 	-no-reboot							\
 	-device virtio-rng-pci						\
@@ -92,7 +102,7 @@ qemu-system-x86_64							\
 	-device virtio-scsi-pci,id=scsi					\
 	-drive file=root,id=root-img,if=none,format=raw,cache=none	\
 	-device scsi-hd,drive=root-img					\
-	-kernel bzImage							\
+	-kernel "$image"							\
 	-append "root=/dev/sda ro console=tty0 console=ttyS0,115200 init=/init.sh $APPEND"	\
 	-serial telnet:localhost:$telnetport,server,nowait,nodelay	\
 	`list_drives`							\
