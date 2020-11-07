@@ -55,6 +55,28 @@ if [ -f "$pfile" ]; then
 	ln -sf "$pfile" local.config
 fi
 
+# run only specific test
+CMD=$(grep -oP "(?<=runtest=)([^ ]*)" < /proc/cmdline || true)
+TESTS='-g all'
+TIMES=once
+if ! [ -z "$CMD" ]; then
+	key=${CMD%:*}
+	value=${CMD#*:}
+	case "$key" in
+	once) TIMES=once;;
+	loop) TIMES=loop;;
+	*)    TIMES=once;;
+	esac
+	declare -a TMPTESTS
+	OIFS="$IFS"
+	IFS=, TMPTESTS=( $value )
+	IFS="$OIFS"
+	if ! [ -z "$TMPTESTS" ]; then
+		TESTS="${TMPTESTS[@]}"
+	fi
+
+fi
+
 if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 	if [ -f "local.config" ]; then
 		echo "FSTESTS: source local.config (`readlink -f local.config`)"
@@ -79,9 +101,25 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 	fi
 fi
 
+export USE_KMEMLEAK=yes
+export DIFF_LENGTH=20
+
 if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
 	echo "FSTESTS: mkfs test dev"
 	mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
-	echo "START FSTESTS"
-	./check -T -g all
+	echo "START FSTESTS: $TIMES: $TESTS"
+	while :; do
+		# brief summary, timestamps
+		./check -b -T $TESTS
+		if ! [ "$TIMES" = "loop" ]; then
+			break
+		fi
+		echo "LOOP FSTESTS"
+	done
 fi
+
+mount -o remount,rw /
+echo "RESULTS: save to /results.tar.gz"
+tar czf /results.tar.gz /tmp/fstests/results
+
+poweroff || echo o > /proc/sysrq-trigger
