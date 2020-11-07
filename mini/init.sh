@@ -23,6 +23,16 @@ export PS1='\u@\h:\w\$ '
 export PATH=/bin:/sbin:/usr/bin/:/usr/sbin
 export SHELL=/bin/bash
 
+# resize terminal
+resize() {
+  old=$(stty -g)
+  stty -echo
+  printf '\033[18t'
+  IFS=';' read -d t _ rows cols _
+  stty "$old"
+  stty cols "$cols" rows "$rows"
+}
+
 # 2nd serial console
 #/dumb-init /sbin/agetty -a root ttyS1 linux &
 
@@ -64,6 +74,7 @@ if [ -f '/autorun.sh' ]; then
 fi
 
 echo "Init shell, exec /bin/bash"
+resize
 /bin/bash
 
 #killall agetty
