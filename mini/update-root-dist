@@ -6,5 +6,8 @@ root=`pwd`/mnt
 
 sudo zypper -n --root "$root" --gpg-auto-import-keys ref -f
 sudo zypper -v -n --root "$root" --gpg-auto-import-keys dup --download-in-advance -l -y --no-recommends "$@"
+ret=$?
 
 ./root-umount
+
+exit $ret
