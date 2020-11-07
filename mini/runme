@@ -4,7 +4,14 @@ ownconfig=false
 fallocate=true
 
 # append to kernel command line
-APPEND=${1:+fstests=$1}
+APPEND=
+for arg in "$@"; do
+	if echo "$arg" | grep -q fstests; then
+		APPEND="$APPEND $arg"
+	elif echo "$arg" | grep -q runtest; then
+		APPEND="$APPEND $arg"
+	fi
+done
 
 if $ownconfig; then
 	# standalone, no inclusion of runme-config
@@ -68,6 +75,7 @@ function list_drives() {
 
 reset_drives
 
+echo "RUNME: append: $APPEND"
 echo "RUNME: start qemu: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
 qemu-system-x86_64							\
 	${guestname:+-name "$guestname"}				\
