@@ -121,5 +121,3 @@ fi
 mount -o remount,rw /
 echo "RESULTS: save to /results.tar.gz"
 tar czf /results.tar.gz /tmp/fstests/results
-
-poweroff || echo o > /proc/sysrq-trigger

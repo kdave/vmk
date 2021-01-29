@@ -14,6 +14,8 @@ for arg in "$@"; do
 		APPEND="$APPEND $arg"
 	elif echo "$arg" | grep -q runtest; then
 		APPEND="$APPEND $arg"
+	elif echo "$arg" | grep -q keepme; then
+		APPEND="$APPPEND keepmerunning"
 	fi
 done
 
@@ -66,7 +68,9 @@ function reset_drives() {
 			truncate -s 0 "$p"
 		fi
 		# on btrfs we need +C, otherwise don't want to fail
-		chattr +C "$p" || true
+		if [ $(stat -f -c %T "$p") = 'btrfs' ]; then
+			chattr +C "$p" || true
+		fi
 		if $fallocate; then
 			fallocate -l "$drivesize" "$p"
 		else

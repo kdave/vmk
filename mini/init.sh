@@ -2,6 +2,7 @@
 
 net=0
 cgroups=1
+keepmerunning=0
 
 echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/mount -t proc none /proc
@@ -12,7 +13,7 @@ echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/ln -s /proc/self/fd /dev/fd
 /usr/bin/mount -t devpts none /dev/pts
 /usr/bin/mount -t debugfs none /sys/kernel/debug
-if [ "$cgroup" = 1 ]; then
+if [ "$cgroups" = 1 ]; then
 	/usr/bin/mount -t cgroup none /sys/fs/cgroup
 	/usr/bin/mount -t cgroup2 none /sys/fs/cgroup/unified
 fi
@@ -36,6 +37,10 @@ resize() {
 # 2nd serial console
 #/dumb-init /sbin/agetty -a root ttyS1 linux &
 
+if grep -q keepme /proc/cmdline; then
+	keepmerunning=1
+fi
+
 if [ "$net" = 1 ]; then
 	echo "INIT: remount / read-write"
 	mount -o remount,rw /
@@ -58,7 +63,7 @@ if [ -f '/autorun.sh' ]; then
 		[ "$x" != '' ] && break
 	done
 	if [ "$x" = '' ]; then
-		if [ "$cgroup" = 1 ]; then
+		if [ "$cgroups" = 1 ]; then
 			echo "INIT: enable cgroups"
 			mkdir -p /sys/fs/cgroup/foo
 			echo $$ > /sys/fs/cgroup/foo/cgroup.procs
@@ -67,15 +72,19 @@ if [ -f '/autorun.sh' ]; then
 
 		echo "INIT: start autorun"
 		/autorun.sh
-		echo "INIT: autorun finished, back to shell"
+		if [ "$keepmerunning" = 1 ]; then
+			echo "INIT: autorun finished, back to shell"
+			resize
+			/bin/bash
+		else
+			echo "INIT: autorun finished, poweroff"
+		fi
 	else
-		echo "INIT: autorun skipped"
+		echo "INIT: autorun skipped, starting shell"
+		resize
+		/bin/bash
 	fi
 fi
-
-echo "Init shell, exec /bin/bash"
-resize
-/bin/bash
 
 #killall agetty
 #wait
@@ -83,3 +92,5 @@ resize
 echo s > /proc/sysrq-trigger
 echo u > /proc/sysrq-trigger
 echo o > /proc/sysrq-trigger
+# Give it some time to avoid panic for killing init
+sleep 10
