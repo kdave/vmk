@@ -5,6 +5,7 @@ fallocate=true
 platform=`uname -i`
 machine=
 image=
+console=
 
 # append to kernel command line
 APPEND=
@@ -44,8 +45,8 @@ if [ -z "$drivesize" ]; then
 fi
 
 case "$platform" in
-	x86_64)  image=bzImage;;
-	aarch64) image=Image; machine=virt;;
+	x86_64)  image=bzImage; console=ttyS0;;
+	aarch64) image=Image; console=ttyAMA0; machine=virt;;
 	*) echo "ERROR: unsupported platform $platform"; exit 1;;
 esac
 
@@ -103,7 +104,7 @@ qemu-system-$platform							\
 	-drive file=root,id=root-img,if=none,format=raw,cache=none	\
 	-device scsi-hd,drive=root-img					\
 	-kernel "$image"							\
-	-append "root=/dev/sda ro console=tty0 console=ttyS0,115200 init=/init.sh $APPEND"	\
+	-append "root=/dev/sda ro earlyprintk console=tty0 console=$console,115200 init=/init.sh $APPEND"	\
 	-serial telnet:localhost:$telnetport,server,nowait,nodelay	\
 	`list_drives`							\
 	$QEMU_MINI_EXTRA
