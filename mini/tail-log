@@ -1,6 +1,6 @@
 #!/bin/sh
 
 echo "=== Last"
-lastlog.pl serial.log | grep --ascii 'run fstest' | tail -n 1
+lastlog.pl serial.log | grep -a 'run fstest' | tail -n 1
 
 tail -f serial.log | fstests-log -
