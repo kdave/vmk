@@ -41,10 +41,19 @@ mv mods-tmp mods || die "cannot finalize mods"
 modspath=$(cd mods && ls -d1 lib/modules/*)
 [ -z "$modspath" ] && die "cannot find module path inside mods/"
 
+echo "$modspath"
+
 echo "=== rsync to root path $modspath"
 ./root-mount || die 'cannot mount'
-rm -rf "mnt/$modspath" || sudo rm -rf -- "mnt/$modspath"
-sudo rsync -vaxAXPH mods/. mnt || die "cannot rsync"
+rm -vrf "mnt/$modspath" || sudo rm -vrf -- "mnt/$modspath"
+# usrmerge
+if [ -h mnt/lib ]; then
+	echo "This is with usrmerge, copy to /usr/lib/modules"
+	sudo rsync -vaxAXPH mods/. mnt/usr || die "cannot rsync"
+else
+	echo "This is pre-usrmerge, copy to /lib/modules"
+	sudo rsync -vaxAXPH mods/. mnt/ || die "cannot rsync"
+fi
 ./root-umount
 
 echo "git: ($br) $sha \"$subj\""
