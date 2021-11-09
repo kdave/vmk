@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "VERSION.h"
 
 #define PRINTERR(...) do { \
@@ -254,10 +255,19 @@ int main(int argc, char *argv[]) {
     sigset_t all_signals;
     sigfillset(&all_signals);
     sigprocmask(SIG_BLOCK, &all_signals, NULL);
+    int ret = 0;
+    struct stat st = {};
 
     int i = 0;
     for (i = 1; i <= MAXSIG; i++) {
         signal(i, dummy);
+    }
+    printf("COMMAND: %s\n", cmd[0]);
+    ret = stat(cmd[0], &st);
+    if (ret < 0) {
+	    printf("STAT error: ret=%d %m\n", ret);
+    } else {
+	    printf("STAT ok\n");
     }
 
     /*
