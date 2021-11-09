@@ -49,6 +49,7 @@ fi
 case "$platform" in
 	x86_64)  image=bzImage; console=ttyS0;;
 	aarch64) image=Image; console=ttyAMA0; machine=virt;;
+	i386) image=bzImage; console=ttyS0;;
 	*) echo "ERROR: unsupported platform $platform"; exit 1;;
 esac
 
