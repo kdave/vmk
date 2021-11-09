@@ -1,7 +1,7 @@
 #!/dumb-init /bin/bash
 
 net=0
-cgroups=1
+cgroups=0
 keepmerunning=0
 
 echo "INIT: set up proc, dev, sys, tmp"
@@ -84,6 +84,10 @@ if [ -f '/autorun.sh' ]; then
 		resize
 		/bin/bash
 	fi
+else
+	echo "INIT: no autorun, starting shell"
+	resize
+	/bin/bash
 fi
 
 #killall agetty
