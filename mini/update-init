@@ -2,6 +2,7 @@
 
 ./root-mount || { echo "ERROR: no mount"; exit 1; }
 
+sudo cp dumb-init mnt
 sudo cp init.sh mnt
 
 ./root-umount
