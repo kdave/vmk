@@ -18,6 +18,8 @@ fi
 
 sudo zypper -n --root "$root" --gpg-auto-import-keys ar --no-gpgcheck --refresh http://download.opensuse.org/tumbleweed/repo/oss tw-oss
 sudo zypper -n --root "$root" --gpg-auto-import-keys ref -f
-sudo zypper -v -n --root "$root" --gpg-auto-import-keys install --download-in-advance -l -y --no-recommends "$@"
+for pkg in "$@"; do
+	sudo zypper -v -n --root "$root" --gpg-auto-import-keys install --download-in-advance -l -y --no-recommends "$pkg"
+done
 
 if $mounted; then ./root-umount; fi

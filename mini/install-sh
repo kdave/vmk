@@ -7,6 +7,15 @@ if ! findmnt "$root"; then
 	mounted=true
 fi
 
+#ZYPP_CONF=/local/dsterba/vm-qemu-vm5
+#sudo -E
+
+sudo mount --bind /dev mnt/dev
+sudo mount --bind /proc mnt/proc
+sudo mount --bind /sys mnt/sys
+
 sudo zypper --root "$root" -v sh
+
+sudo umount mnt/dev mnt/proc mnt/sys
 
 if $mounted; then ./root-umount; fi
