@@ -92,7 +92,8 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 		export TEST_DEV=/dev/vda
 		export TEST_DIR=/tmp/test
 		unset SCRATCH_DEV
-		export SCRATCH_DEV_POOL=$(echo /dev/vd[b-i])
+		#export SCRATCH_DEV_POOL=$(echo /dev/vd[b-i])
+		export SCRATCH_DEV_POOL='/dev/vdb /dev/vdc /dev/vdd /dev/vde /dev/vdf /dev/vdg /dev/vdh /dev/vdi'
 		export LOGWRITES_DEV=/dev/vdh
 		export SCRATCH_MNT=/tmp/scratch
 		export FSTYP=btrfs

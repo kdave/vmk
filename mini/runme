@@ -89,6 +89,9 @@ function list_drives() {
 }
 
 reset_drives
+# test
+: \
+	-cpu host							\
 
 echo "RUNME: append: $APPEND"
 echo "RUNME: start qemu $platform: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
@@ -96,7 +99,6 @@ qemu-system-$platform							\
 	${guestname:+-name "$guestname"}				\
 	-display none							\
 	-enable-kvm							\
-	-cpu host							\
 	${machine:+-machine "$machine"}					\
 	-boot c								\
 	-no-reboot							\
