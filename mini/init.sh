@@ -37,7 +37,7 @@ resize() {
 # 2nd serial console
 #/dumb-init /sbin/agetty -a root ttyS1 linux &
 
-if grep -q keepme /proc/cmdline; then
+if grep keepme /proc/cmdline; then
 	keepmerunning=1
 fi
 

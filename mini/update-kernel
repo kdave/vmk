@@ -29,6 +29,9 @@ echo "git: ($br) $sha \"$subj\""
 
 cp arch/x86/boot/bzImage "$here" || die "no bzImage"
 rm -rf "$here/mods-tmp"
+mkdir -p "$here/mods-tmp/usr/lib/modules"
+# Workaround: make the link so depmod works but it looks like pre-usrmerge
+ln -sf "usr/lib" "$here/mods-tmp/lib"
 make modules_install INSTALL_MOD_PATH="$here/mods-tmp" || die "no modules"
 
 cd "$here" || die 'cannot go back'
@@ -41,13 +44,18 @@ mv mods-tmp mods || die "cannot finalize mods"
 modspath=$(cd mods && ls -d1 lib/modules/*)
 [ -z "$modspath" ] && die "cannot find module path inside mods/"
 
+# Workaround: don't delete the new lib
+#rm -- "$here/mods-tmp/lib"
+
 echo "$modspath"
 
 echo "=== rsync to root path $modspath"
 ./root-mount || die 'cannot mount'
 rm -vrf "mnt/$modspath" || sudo rm -vrf -- "mnt/$modspath"
 # usrmerge
-if [ -h mnt/lib ]; then
+# Workaround: lib is there but it's not usrmerge, so do pre-usrmerge
+# if [ -h mnt/lib ]; then
+if false; then
 	echo "This is with usrmerge, copy to /usr/lib/modules"
 	sudo rsync -vaxAXPH mods/. mnt/usr || die "cannot rsync"
 else
