@@ -53,6 +53,8 @@ pfile="$FSTESTSCONFIGBASE/fstests.$PRESET"
 if [ -f "$pfile" ]; then
 	echo "FSTESTS: link preset $pfile to fstests"
 	ln -sf "$pfile" local.config
+else
+	echo "FSTESTS: internal preset $PRESET"
 fi
 
 # run only specific test
@@ -99,11 +101,23 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 		export FSTYP=btrfs
 		export MKFS_OPTIONS='-K -f'
 		export MOUNT_OPTIONS=''
+
+		case "$PRESET" in
+			bgt)
+				MKFS_OPTIONS="$MKFS_OPTIONS -O bgt";;
+			rst)
+				MKFS_OPTIONS="$MKFS_OPTIONS -O rst";;
+			compress)
+				MOUNT_OPTIONS="$MOUNT_OPTIONS -o compress";;
+			*) :;;
+		esac
 	fi
 fi
 
 export USE_KMEMLEAK=yes
 export DIFF_LENGTH=20
+
+mkdir -p "$TEST_DIR" "$SCRATCH_MNT"
 
 if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
 	echo "FSTESTS: mkfs test dev"
