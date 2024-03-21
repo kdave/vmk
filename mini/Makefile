@@ -2,7 +2,7 @@
 SHELL=bash
 CFLAGS=-std=gnu99 -static -s -Wall -Werror -O3
 
-VERSION = 1.2.2
+VERSION = 1.2.5
 
 dumb-init: dumb-init.c VERSION.h
 	$(CC) $(CFLAGS) -o dumb-init dumb-init.c
