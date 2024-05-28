@@ -18,6 +18,8 @@ for arg in "$@"; do
 		APPEND="$APPPEND keepmerunning"
 	fi
 done
+#APPEND=${1:+fstests=$1}
+#APPEND=${1}
 
 if $ownconfig; then
 	# standalone, no inclusion of runme-config
@@ -89,6 +91,7 @@ function list_drives() {
 }
 
 reset_drives
+
 # test
 : \
 	-cpu host							\
@@ -97,6 +100,7 @@ echo "RUNME: append: $APPEND"
 echo "RUNME: start qemu $platform: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
 qemu-system-$platform							\
 	${guestname:+-name "$guestname"}				\
+	${vnc:+-vnc "$vnc"}						\
 	-display none							\
 	-enable-kvm							\
 	${machine:+-machine "$machine"}					\
