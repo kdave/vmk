@@ -110,6 +110,8 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 				MKFS_OPTIONS="$MKFS_OPTIONS -O rst";;
 			quota)
 				MKFS_OPTIONS="$MKFS_OPTIONS -O quota";;
+			squota)
+				MKFS_OPTIONS="$MKFS_OPTIONS -O squota";;
 			compress)
 				MOUNT_OPTIONS="$MOUNT_OPTIONS -o compress";;
 			*) :;;
