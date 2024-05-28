@@ -96,8 +96,9 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 		unset SCRATCH_DEV
 		#export SCRATCH_DEV_POOL=$(echo /dev/vd[b-i])
 		export SCRATCH_DEV_POOL='/dev/vdb /dev/vdc /dev/vdd /dev/vde /dev/vdf /dev/vdg /dev/vdh /dev/vdi'
-		export LOGWRITES_DEV=/dev/vdh
+		export LOGWRITES_DEV=/dev/vdi
 		export SCRATCH_MNT=/tmp/scratch
+		#export FSTYP=xfs
 		export FSTYP=btrfs
 		export MKFS_OPTIONS='-K -f'
 		export MOUNT_OPTIONS=''
@@ -107,6 +108,8 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 				MKFS_OPTIONS="$MKFS_OPTIONS -O bgt";;
 			rst)
 				MKFS_OPTIONS="$MKFS_OPTIONS -O rst";;
+			quota)
+				MKFS_OPTIONS="$MKFS_OPTIONS -O quota";;
 			compress)
 				MOUNT_OPTIONS="$MOUNT_OPTIONS -o compress";;
 			*) :;;
@@ -115,13 +118,14 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 fi
 
 export USE_KMEMLEAK=yes
-export DIFF_LENGTH=20
+export DIFF_LENGTH=0
 
 mkdir -p "$TEST_DIR" "$SCRATCH_MNT"
 
 if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
 	echo "FSTESTS: mkfs test dev"
-	mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
+	#mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
+	mkfs.$FSTYP $MKFS_OPTIONS "$TEST_DEV"
 	echo "START FSTESTS: $TIMES: $TESTS"
 	while :; do
 		# brief summary, timestamps
