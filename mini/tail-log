@@ -1,6 +1,7 @@
 #!/bin/sh
 
 echo "=== Last"
+touch serial.log
 lastlog.pl serial.log | grep -a 'run fstest' | tail -n 1
 
 tail -f serial.log | fstests-log -
