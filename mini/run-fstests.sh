@@ -14,6 +14,7 @@ set -- "$@"
 
 PHASE="${1:-all}"
 FSTESTSCONFIGBASE=/
+VERSION=$(uname -r | sed -e 's/^\([0-9]\.[0-9]\+\)\..*/\1/')
 
 cd /tmp
 
@@ -121,17 +122,23 @@ fi
 
 export USE_KMEMLEAK=yes
 export DIFF_LENGTH=0
+EXCLUDE=
+
+if [ -f "EXCLUDE.${VERSION}" ]; then
+	EXCLUDE="-E EXCLUDE.${VERSION}"
+fi
 
 mkdir -p "$TEST_DIR" "$SCRATCH_MNT"
 
 if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
+	echo "Use exclude: $EXCLUDE"
 	echo "FSTESTS: mkfs test dev"
 	#mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
 	mkfs.$FSTYP $MKFS_OPTIONS "$TEST_DEV"
 	echo "START FSTESTS: $TIMES: $TESTS"
 	while :; do
 		# brief summary, timestamps
-		./check -b -T $TESTS
+		./check -b -T $EXCLUDE $TESTS
 		if ! [ "$TIMES" = "loop" ]; then
 			break
 		fi
