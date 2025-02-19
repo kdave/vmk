@@ -1,12 +1,23 @@
 #!/bin/sh
 
-# usage: $0 [phase | test]
+# Usage: $0 [phase | test]
 # phase is one of:
 # - build  - unpack and build
 # - prep   - load module, create dirs, add users
 # - config - set up environment
 # - run    - run up to the tests
 # - all    - all of the above in that order
+#
+# Configure via kerne command line:
+# - fstests=PRESET - pick builtin preset features (bgt, rst, quota, squota, compress)
+# - runtest=btrfs/001 - run this test, once (default)
+# - runtest=once:btrfs/001 - run this test, explicitly once
+# - runtest=btrfs/001,btrfs/002 - list of tests
+# - runtets=loop:btrfs/011 - loop all the tests
+#
+# Excludes:
+# - EXCLUDE.version - automatically pick excludes from the main version (6.12)
+# - EXCLUDE.vm - current VM environment workarounds
 
 echo "RUN FSTESTS (args: $@)"
 set -eu
@@ -123,22 +134,26 @@ fi
 export USE_KMEMLEAK=yes
 export DIFF_LENGTH=0
 EXCLUDE=
+VMEXCLUDE=
 
 if [ -f "EXCLUDE.${VERSION}" ]; then
 	EXCLUDE="-E EXCLUDE.${VERSION}"
 fi
 
+if [ -f "EXCDLUDE.vm" ]; then
+	VMEXCLUDE="-E EXCLUDE.vm"
+fi
+
 mkdir -p "$TEST_DIR" "$SCRATCH_MNT"
 
 if [ "$PHASE" = 'run' -o "$PHASE" = 'all' ]; then
-	echo "Use exclude: $EXCLUDE"
+	echo "Use exclude: $EXCLUDE $VMEXCLUDE"
 	echo "FSTESTS: mkfs test dev"
-	#mkfs.btrfs $MKFS_OPTIONS "$TEST_DEV"
 	mkfs.$FSTYP $MKFS_OPTIONS "$TEST_DEV"
 	echo "START FSTESTS: $TIMES: $TESTS"
 	while :; do
 		# brief summary, timestamps
-		./check -b -T $EXCLUDE $TESTS
+		./check -b -T $EXCLUDE $VMEXCLUDE $TESTS
 		if ! [ "$TIMES" = "loop" ]; then
 			break
 		fi
