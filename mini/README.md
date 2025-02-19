@@ -30,10 +30,10 @@ networking
 Dependencies
 ------------
 
-* qemu (KVM)
+* qemu: KVM
 * dumb-init: built with static version of libc
-* e2fsprogs (mkfs root)
-* script, telnet
+* e2fsprogs: mkfs root
+* script, telnet: serial console
 
 
 Minimal VM template
@@ -62,6 +62,7 @@ Autorun:
 
 - reset-autorun
 - update-autorun.sh
+- root-putfile
 
 
 Workflow
@@ -85,6 +86,6 @@ Other
 
 Configuration:
 
-* IDE provides only 4 devices
-* SCSI is unstable and the driver crashes under heavy load
-* VIRTIO works best it seems
+* IDE provides only 4 devices, OK for root partition
+* SCSI is unstable and the driver crashes under heavy load, OK for the root partition
+* VIRTIO works best
