@@ -1,5 +1,9 @@
 #!/dumb-init /bin/bash
 
+# Parameters read from /proc/cmdline
+# net - start network and run ssh
+# keepme - keep machine running after autorun ends
+
 net=0
 cgroups=0
 keepmerunning=0
@@ -24,21 +28,27 @@ export PS1='\u@\h:\w\$ '
 export PATH=/bin:/sbin:/usr/bin/:/usr/sbin
 export SHELL=/bin/bash
 
-# resize terminal
+# Resize terminal magic
 resize() {
-  old=$(stty -g)
-  stty -echo
-  printf '\033[18t'
-  IFS=';' read -d t _ rows cols _
-  stty "$old"
-  stty cols "$cols" rows "$rows"
+	old=$(stty -g)
+	stty -echo
+	printf '\033[18t'
+	IFS=';' read -d t _ rows cols _
+	stty "$old"
+	stty cols "$cols" rows "$rows"
 }
+
+resize
 
 # 2nd serial console
 #/dumb-init /sbin/agetty -a root ttyS1 linux &
 
-if grep keepme /proc/cmdline; then
+if grep -w keepme /proc/cmdline; then
 	keepmerunning=1
+fi
+
+if grep -w net /proc/cmdline; then
+	net=1
 fi
 
 if [ "$net" = 1 ]; then
@@ -51,6 +61,8 @@ if [ "$net" = 1 ]; then
 		/usr/sbin/sshd-gen-keys-start
 		/usr/sbin/sshd
 	fi
+	# Qemu user network:
+	type -p route && route add default gw 10.0.2.2
 fi
 
 if [ -f '/autorun.sh' ]; then

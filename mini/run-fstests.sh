@@ -34,11 +34,13 @@ if [ "$PHASE" = 'build' -o "$PHASE" = 'all' ]; then
 	cd fstests
 	if ! [ -f 'configure' ]; then
 		autoreconf -fiv --include=m4
-		libtoolize -i
 		./configure
 	fi
 	make -j 4
 fi
+
+# Show the devices
+lsblk
 
 # pwd is now /tmp/fstests
 
@@ -126,6 +128,10 @@ if [ "$PHASE" = 'config' -o "$PHASE" = 'all' ]; then
 				MKFS_OPTIONS="$MKFS_OPTIONS -O squota";;
 			compress)
 				MOUNT_OPTIONS="$MOUNT_OPTIONS -o compress";;
+			compress-lzo)
+				MOUNT_OPTIONS="$MOUNT_OPTIONS -o compress=lzo";;
+			compress-zstd)
+				MOUNT_OPTIONS="$MOUNT_OPTIONS -o compress=zstd";;
 			*) :;;
 		esac
 	fi
@@ -140,8 +146,9 @@ if [ -f "EXCLUDE.${VERSION}" ]; then
 	EXCLUDE="-E EXCLUDE.${VERSION}"
 fi
 
-if [ -f "EXCDLUDE.vm" ]; then
-	VMEXCLUDE="-E EXCLUDE.vm"
+# VM specific exclude list
+if [ -f "/EXCDLUDE.vm" ]; then
+	VMEXCLUDE="-E /EXCLUDE.vm"
 fi
 
 mkdir -p "$TEST_DIR" "$SCRATCH_MNT"
