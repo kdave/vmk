@@ -1,13 +1,12 @@
 acl
 attr
+btrfsprogs
 dbench
 dbench4
+device-mapper
+duperemove
 ffsb
 fio
 fs_mark
-btrfsprogs
-strace
-device-mapper
 lvm
-duperemove
-
+strace

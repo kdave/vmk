@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 # install packages from list given in the file
 # TOOD: merge with install-pkg
 

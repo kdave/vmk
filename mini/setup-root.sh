@@ -13,8 +13,9 @@ sudo cp dumb-init mnt
 if [ -f "zypp.conf" ]; then
 	sudo mkdir -p mnt/etc/zypp
 	sudo cp zypp.conf mnt/etc/zypp
+	echo "Looks like you have manual zyp config, unpause"
+	read pause
 fi
-read pause
 ./root-umount
 
 ./update-init

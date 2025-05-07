@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 # usage: $0 packages...
 #
 # create minimal root image with the given package installed + dependencies
@@ -16,10 +16,18 @@ if ! findmnt "$root"; then
 	mounted=true
 fi
 
-sudo zypper -n --root "$root" --gpg-auto-import-keys ar --no-gpgcheck --refresh http://download.opensuse.org/tumbleweed/repo/oss tw-oss
+sudo zypper -n --root "$root" --gpg-auto-import-keys ar --no-gpgcheck --refresh https://download.opensuse.org/tumbleweed/repo/oss tw-oss
 sudo zypper -n --root "$root" --gpg-auto-import-keys ref -f
 for pkg in "$@"; do
-	sudo zypper -v -n --root "$root" --gpg-auto-import-keys install --download-in-advance -l -y --no-recommends "$pkg"
+	p="$pkg"
+	case "$pkg" in
+		"!"*) p=${pkg:1}
+		sudo zypper -v -n --root "$root" --gpg-auto-import-keys rm -y "$p"
+		;;
+		*)
+		sudo zypper -v -n --root "$root" --gpg-auto-import-keys install --download-in-advance -l -y --no-recommends "$p"
+		;;
+	esac
 done
 
 if $mounted; then ./root-umount; fi
