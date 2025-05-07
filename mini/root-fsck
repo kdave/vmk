@@ -1,0 +1,3 @@
+#!/bin/sh
+
+e2fsck -fvy -C 0 root
