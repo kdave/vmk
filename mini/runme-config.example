@@ -1,35 +1,29 @@
 #!/bin/sh
 
-## Generic
-guestname=vm0
+nr=0
+guestname=vm${rn}
 
-## Machine type
 cpu=4
 mem=2G
 
-## Drives
-
-# number of disk# files (symlinks are ok, always resolved)
 drives=0
-# blockdev cache type (default: writeback)
 cache=writeback
-# blockdev interface type (default: virtio)
 blkif=virtio
-# recreate disk images before starting (truncate or fallocate)
 cleandisk=true
-# use fallocate to for the drives, or just truncate (default: fallocate)
 drivefallocate=true
-# size of the drive (default: 12G, format accepted by fallocate or truncate)
 drivesize=12G
 
-## Connection
+telnetport=990${rn}
+sshport=220${rn}
 
-# telnet port
-telnetport=9901
-# sshport
-sshport=2201
-
-## Kernel
-
-# git dir with kernel
 gitdir=/tmp
+
+# Docs
+# nr:              numeric identifier, 1..9
+# drives:          number of disk# files (symlinks are ok, always resolved)
+# cache:           blockdev cache type (default: writeback)
+# blkif:           blockdev interface type (default: virtio)
+# cleandisk:       recreate disk images before starting (truncate or fallocate)
+# drivefallocate:  use fallocate to for the drives, or just truncate (default: fallocate)
+# drivesize:       size of the drive (default: 12G, format accepted by fallocate or truncate)
+# gitdir:          git dir with kernel
