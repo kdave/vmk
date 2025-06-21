@@ -8,5 +8,10 @@ duperemove
 ffsb
 fio
 fs_mark
+libcap-progs
 lvm
+openssl-devel
+sed
 strace
+util-linux-systemd
+xfsprogs-devel

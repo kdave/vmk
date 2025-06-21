@@ -13,5 +13,6 @@ sed
 shadow
 tmux
 util-linux
+util-linux-systemd
 xz
 which

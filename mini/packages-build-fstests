@@ -1,5 +1,7 @@
 acl
+acl-devel
 attr
+attr-devel
 autoconf
 automake
 bc
@@ -7,7 +9,6 @@ bind-utils
 e2fsprogs
 e2fsprogs-devel
 gcc
-gdbm-devel
 gdbm-devel
 libacl-devel
 libaio-devel

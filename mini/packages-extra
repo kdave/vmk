@@ -1,5 +1,5 @@
-openssh
-net-tools-deprecated
-iproute2
-pciutils
 dhcp-client
+iproute2
+net-tools-deprecated
+openssh
+pciutils
