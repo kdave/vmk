@@ -7,6 +7,7 @@
 net=0
 cgroups=0
 keepmerunning=0
+debugfs=false
 
 echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/mount -t proc none /proc
@@ -16,7 +17,7 @@ echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/mkdir -p /dev/mapper
 /usr/bin/ln -s /proc/self/fd /dev/fd
 /usr/bin/mount -t devpts none /dev/pts
-/usr/bin/mount -t debugfs none /sys/kernel/debug
+$debugfs && /usr/bin/mount -t debugfs none /sys/kernel/debug
 if [ "$cgroups" = 1 ]; then
 	/usr/bin/mount -t cgroup none /sys/fs/cgroup
 	/usr/bin/mount -t cgroup2 none /sys/fs/cgroup/unified
