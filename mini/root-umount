@@ -1,3 +1,10 @@
 #!/bin/sh
 
-sudo umount mnt
+lo=$(sudo losetup --associated root -O name --noheadings)
+echo "Loop device $lo"
+if sudo umount mnt; then
+	echo "Free after umount"
+	sudo losetup --verbose -d "$lo"
+else
+	echo "Cannot umount, don't free $lo"
+fi

@@ -2,5 +2,11 @@
 
 mkdir -p mnt
 if ! findmnt mnt; then
-	sudo mount -o loop root mnt
+	lo=$(sudo losetup --verbose --show --find --nooverlap root)
+	if [ $? != 0 ]; then
+		echo "ERROR: cannot find loop device for mount"
+		exit 1
+	fi
+	echo "Mount (re)use device $lo"
+	sudo mount "$lo" mnt
 fi
