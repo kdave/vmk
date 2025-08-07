@@ -5,6 +5,8 @@ if [ -f root ]; then
 	exit 1
 fi
 
+touch root
+chattr +Cm root
 truncate -s 10G root
 /sbin/mkfs.ext2 root
 
@@ -16,12 +18,16 @@ if [ -f "zypp.conf" ]; then
 	echo "Looks like you have manual zyp config, unpause"
 	read pause
 fi
-./root-umount
+# Keep it for the rest
+#./root-umount
 
 ./update-init
 
 for p in packages-*; do
 	./install-list "$p"
+	sync
 done
+
+./root-umount
 
 echo "NOTE: add your testing files"

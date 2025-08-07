@@ -4,7 +4,9 @@ lo=$(sudo losetup --associated root -O name --noheadings)
 echo "Loop device $lo"
 if sudo umount mnt; then
 	echo "Free after umount"
-	sudo losetup --verbose -d "$lo"
+	for l in $lo; do
+		sudo losetup --verbose -d "$l"
+	done
 else
 	echo "Cannot umount, don't free $lo"
 fi

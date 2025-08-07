@@ -2,7 +2,8 @@
 
 mkdir -p mnt
 if ! findmnt mnt; then
-	lo=$(sudo losetup --verbose --show --find --nooverlap root)
+	#lo=$(sudo losetup --verbose --show --find --nooverlap root)
+	lo=$(sudo losetup --verbose --show --find --direct-io=on root)
 	if [ $? != 0 ]; then
 		echo "ERROR: cannot find loop device for mount"
 		exit 1
