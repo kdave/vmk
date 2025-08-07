@@ -77,8 +77,14 @@ if [ "$net" = 1 ]; then
 	type -p route && route add default gw 10.0.2.2
 fi
 
-if [ -f '/autorun.sh' ]; then
-	full=$(readlink -f /autorun.sh)
+AUTORUN=$(grep -oP "(?<=autorun=)([^ ]*)" < /proc/cmdline || true)
+if [ -z "$AUTORUN" ]; then
+	if [ -f '/autorun.sh' ]; then
+		AUTORUN="/autorun.sh"
+	fi
+fi
+if [ -f "$AUTORUN" ]; then
+	full=$(readlink -f "$AUTORUN")
 	echo "INIT: autorun.sh ($full) found, starting in 3 seconds, press key to skip"
 	x=
 	for i in 2 1 0; do
@@ -95,7 +101,7 @@ if [ -f '/autorun.sh' ]; then
 		fi
 
 		echo "INIT: start autorun"
-		/autorun.sh
+		"$full"
 		if [ "$keepmerunning" = 1 ]; then
 			echo "INIT: autorun finished, back to shell"
 			resize
@@ -109,7 +115,7 @@ if [ -f '/autorun.sh' ]; then
 		/bin/bash
 	fi
 else
-	echo "INIT: no autorun, starting shell"
+	echo "INIT: no autorun ($AUTORUN), starting shell"
 	resize
 	/bin/bash
 fi

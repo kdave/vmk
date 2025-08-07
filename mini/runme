@@ -18,6 +18,8 @@ for arg in "$@"; do
 		APPEND="$APPEND $arg"
 	elif echo "$arg" | grep -q keepme; then
 		APPEND="$APPPEND keepmerunning"
+	elif echo "$arg" | grep -q autorun; then
+		APPEND="$APPEND $arg"
 	fi
 done
 #APPEND=${1:+fstests=$1}
