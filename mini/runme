@@ -5,7 +5,9 @@ fallocate=true
 platform=`uname -i`
 machine=
 image=
+model=
 console=
+serial=telnet
 
 # append to kernel command line
 APPEND=
@@ -55,6 +57,12 @@ case "$platform" in
 	*) echo "ERROR: unsupported platform $platform"; exit 1;;
 esac
 
+if [ -z "$serial" -o "$serial" == 'telnet' ]; then
+	serial="telnet:localhost:$telnetport,server,nowait,nodelay"
+else
+	echo "RUNME: custom serial output: $serial"
+fi
+
 function reset_drives() {
 	bn=$(readlink -f disk1)
 	bn=$(dirname "$bn")
@@ -83,7 +91,8 @@ function reset_drives() {
 }
 
 function list_drives() {
-	d=
+	local d=
+
 	for i in `seq $drives`; do
 		d="$d -drive file=disk${i},if=$blkif,index=${i},media=disk,cache=$cache,format=raw,discard=on"
 	done
@@ -95,26 +104,28 @@ reset_drives
 mkdir -p share
 
 echo "RUNME: append: $APPEND"
-echo "RUNME: start qemu $platform: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
+echo "RUNME: start qemu $platform: name=$guestname cpu=$cpu/$model mem=$mem cache=$cache blkif=$blkif ssh=$sshport"
 qemu-system-$platform							\
 	${guestname:+-name "$guestname"}				\
 	${vnc:+-vnc "$vnc"}						\
-	-display none							\
 	-enable-kvm							\
+	-display none							\
 	${machine:+-machine "$machine"}					\
+	${model:+-cpu "$model"}						\
+	-m "$mem"							\
+	-smp "$cpu"							\
 	-boot c								\
 	-no-reboot							\
 	-device virtio-rng-pci						\
 	-device e1000,netdev=net0					\
 	-netdev user,id=net0,hostfwd=tcp::${sshport}-:22		\
-	-m "$mem"							\
-	-smp "$cpu"							\
 	-device virtio-scsi-pci,id=scsi					\
 	-drive file=root,id=root-img,if=none,format=raw,cache=none	\
 	-device scsi-hd,drive=root-img					\
-	-kernel "$image"							\
+	-kernel "$image"						\
 	-append "root=/dev/sda ro earlyprintk console=tty0 console=$console,115200 init=/init.sh $APPEND"	\
-	-serial telnet:localhost:$telnetport,server,nowait,nodelay	\
+	-serial "$serial"						\
+	-virtfs local,path=`pwd`/share,security_model=none,mount_tag=virtshare	\
 	`list_drives`							\
 	$QEMU_MINI_EXTRA
 
