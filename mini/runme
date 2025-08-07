@@ -80,9 +80,9 @@ function reset_drives() {
 		if $cleandisk; then
 			truncate -s 0 "$p"
 		fi
-		# on btrfs we need +C, otherwise don't want to fail
+		# on btrfs we need +Cm, otherwise don't want to fail
 		if [ $(stat -f -c %T "$p") = 'btrfs' ]; then
-			chattr +C "$p" || true
+			chattr +Cm "$p" || true
 		fi
 		if $fallocate; then
 			fallocate -l "$drivesize" "$p"
