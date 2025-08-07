@@ -13,6 +13,7 @@ echo "INIT: set up proc, dev, sys, tmp"
 /usr/bin/mount -t proc none /proc
 /usr/bin/mount -t sysfs none /sys
 /usr/bin/mount -t tmpfs none /tmp
+/usr/bin/mount -t tmpfs none /run
 /usr/bin/mkdir -p /dev/pts
 /usr/bin/mkdir -p /dev/mapper
 /usr/bin/ln -s /proc/self/fd /dev/fd
@@ -39,6 +40,11 @@ ip a add 127.0.0.1/8 dev lo
 export PS1='\u@\h:\w\$ '
 export PATH=/bin:/sbin:/usr/bin/:/usr/sbin
 export SHELL=/bin/bash
+export LANG=en_US.UTF-8
+mkdir /run/tmux
+chmod 1777 /run/tmux
+mkdir /run/tmux/0
+chmod 600 /run/tmux/0
 
 # Resize terminal magic
 resize() {
