@@ -1,9 +1,10 @@
 #!/bin/sh
 
 nr=0
-guestname=vm${rn}
+guestname=vm${nr}
 
-cpu=4
+cpu=2
+#model=
 mem=2G
 
 drives=0
@@ -13,8 +14,9 @@ cleandisk=true
 drivefallocate=true
 drivesize=12G
 
-telnetport=990${rn}
-sshport=220${rn}
+telnetport=$((9900+${nr}))
+sshport=$((2200+${nr}))
+#serial=telnet
 
 gitdir=/tmp
 
@@ -27,3 +29,6 @@ gitdir=/tmp
 # drivefallocate:  use fallocate to for the drives, or just truncate (default: fallocate)
 # drivesize:       size of the drive (default: 12G, format accepted by fallocate or truncate)
 # gitdir:          git dir with kernel
+# serial:          serial driver, 'telnet' on 'telnetport' (or empty), or set
+#                  your own, like file:serial.log but it won't be interactive
+# model:           cpu model (default: empty), or 'host' for host CPU
