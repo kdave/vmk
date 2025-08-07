@@ -92,9 +92,7 @@ function list_drives() {
 
 reset_drives
 
-# test
-: \
-	-cpu host							\
+mkdir -p share
 
 echo "RUNME: append: $APPEND"
 echo "RUNME: start qemu $platform: name=$guestname cpu=$cpu mem=$mem cache=$cache blkif=$blkif ssh=$sshport"

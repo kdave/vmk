@@ -23,6 +23,17 @@ if [ "$cgroups" = 1 ]; then
 	/usr/bin/mount -t cgroup2 none /sys/fs/cgroup/unified
 fi
 
+if ! [ -d /share ]; then
+	mount -o remount,rw /
+	mkdir /share
+	mount -o remount,ro /
+fi
+
+if grep -q 9p /proc/filesystems; then
+	echo "INIT: mount shared direcoty /share"
+	mount -t 9p virtshare /share
+fi
+
 ip a add 127.0.0.1/8 dev lo
 
 export PS1='\u@\h:\w\$ '
