@@ -18,13 +18,16 @@ QEMU block device interfaces:
   * `CONFIG_VIRTIO_BLK`
   * `CONFIG_SCSI_VIRTIO`
 
-overall
-  * `CONFIG_VIRTIO`
-  * hwrng -- `CONFIG_HW_RANDOM_VIRTIO`
+Interfaces:
 
-networking
-* virtio
+* `CONFIG_VIRTIO`
+  * hwrng -- `CONFIG_HW_RANDOM_VIRTIO`
   * `CONFIG_VIRTIO_NET`
+* host/guest sharing
+  * `CONFIG_9P_FS`
+  * `CONFIG_NET_9P`
+  * `CONFIG_NET_9P_FD`
+  * `CONFIG_NET_9P_VIRTIO`
 
 
 Dependencies
@@ -33,7 +36,7 @@ Dependencies
 * qemu: KVM
 * dumb-init: built with static version of libc
 * e2fsprogs: mkfs root
-* script, telnet: serial console
+* `script`, `telnet`: serial console
 
 
 Minimal VM template
