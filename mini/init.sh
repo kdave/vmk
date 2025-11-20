@@ -1,12 +1,16 @@
 #!/dumb-init /bin/bash
 
 # Parameters read from /proc/cmdline
-# net - start network and run ssh
-# keepme - keep machine running after autorun ends
+# net       - (0/1) start network and run ssh
+# keepme    - (0/1) keep machine running after autorun ends
+# autorun   - (string) executable name to run instead of /autorun.sh
+# autoparam - (string, no spaces) encoded parameters to pass to autorun (both
+#             as boot parameter and /autorun.sh), spaces are encoded as '%',
+#             '%' is doubled
 
 net=0
 cgroups=0
-keepmerunning=0
+keepme=0
 debugfs=false
 
 echo "INIT: set up proc, dev, sys, tmp"
@@ -31,7 +35,7 @@ if ! [ -d /share ]; then
 fi
 
 if grep -q 9p /proc/filesystems; then
-	echo "INIT: mount shared direcoty /share"
+	echo "INIT: mount shared directory /share"
 	mount -t 9p virtshare /share
 fi
 
@@ -62,7 +66,7 @@ resize
 #/dumb-init /sbin/agetty -a root ttyS1 linux &
 
 if grep -w keepme /proc/cmdline; then
-	keepmerunning=1
+	keepme=1
 fi
 
 if grep -w net /proc/cmdline; then
@@ -89,9 +93,20 @@ if [ -z "$AUTORUN" ]; then
 		AUTORUN="/autorun.sh"
 	fi
 fi
+
+AUTOPARAM=$(grep -oP "(?<=autoparam=)([^ ]*)" < /proc/cmdline || true)
+if [ -n "$AUTOPARAM" ]; then
+	# Decode: '%' -> ' ', '%%' -> '%'
+	#echo "INIT: decode autoparam: $AUTOPARAM"
+	AUTOPARAM=$(echo "$AUTOPARAM" | sed -e 's/%%/\xff/g')
+	AUTOPARAM=$(echo "$AUTOPARAM" | sed -e 's/%/ /g')
+	AUTOPARAM=$(echo "$AUTOPARAM" | sed -e 's/\xff/%/g')
+	echo "INIT: decoded autoparam: $AUTOPARAM"
+fi
+
 if [ -f "$AUTORUN" ]; then
-	full=$(readlink -f "$AUTORUN")
-	echo "INIT: autorun.sh ($full) found, starting in 3 seconds, press key to skip"
+	AUTORUN=$(readlink -f "$AUTORUN")
+	echo "INIT: autorun.sh ($AUTORUN) found, starting in 3 seconds, press key to skip"
 	x=
 	for i in 2 1 0; do
 		read -N 1 -t 1 x
@@ -107,8 +122,8 @@ if [ -f "$AUTORUN" ]; then
 		fi
 
 		echo "INIT: start autorun"
-		"$full"
-		if [ "$keepmerunning" = 1 ]; then
+		"$AUTORUN" $AUTOPARAM
+		if [ "$keepme" = 1 ]; then
 			echo "INIT: autorun finished, back to shell"
 			resize
 			/bin/bash
