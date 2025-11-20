@@ -3,11 +3,13 @@
 mkdir -p mnt
 if ! findmnt mnt; then
 	#lo=$(sudo losetup --verbose --show --find --nooverlap root)
+	sync root
 	lo=$(sudo losetup --verbose --show --find --direct-io=on root)
 	if [ $? != 0 ]; then
 		echo "ERROR: cannot find loop device for mount"
 		exit 1
 	fi
 	echo "Mount (re)use device $lo"
+	sync "$lo"
 	sudo mount "$lo" mnt
 fi

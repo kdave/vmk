@@ -2,6 +2,7 @@
 
 lo=$(sudo losetup --associated root -O name --noheadings)
 echo "Loop device $lo"
+sync -f mnt
 if sudo umount mnt; then
 	echo "Free after umount"
 	for l in $lo; do
