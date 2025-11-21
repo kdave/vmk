@@ -17,7 +17,7 @@ for arg in "$@"; do
 	elif echo "$arg" | grep -q runtest; then
 		APPEND="$APPEND $arg"
 	elif echo "$arg" | grep -q keepme; then
-		APPEND="$APPEND keepmerunning"
+		APPEND="$APPEND keepme"
 	elif echo "$arg" | grep -q autorun; then
 		APPEND="$APPEND $arg"
 	elif echo "$arg" | grep -q autoparam; then
