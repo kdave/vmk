@@ -15,6 +15,9 @@ libaio-devel
 libattr-devel
 libbtrfs-devel
 libcap-progs
+libbtrfsutil-devel
+libbtrfs-devel
+liburing-devel
 libtool
 m4
 make

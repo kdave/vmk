@@ -1,6 +1,9 @@
 acl
 attr
 btrfsprogs
+libbtrfsutil1
+libbtrfs0
+liburing2
 dbench
 dbench4
 device-mapper
